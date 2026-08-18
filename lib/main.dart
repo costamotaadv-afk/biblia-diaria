@@ -1,5 +1,6 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -52,6 +53,7 @@ class _BibliaAppState extends State<BibliaApp> {
 
   Future<void> _carregarPreferencias() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       temaEscuro = prefs.getBool('tema_escuro') ?? false;
       fonteGrande = prefs.getBool('fonte_grande') ?? true;
@@ -151,14 +153,10 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 
   Future<void> _carregar() async {
-    String jsonStr;
-    try {
-      jsonStr = await rootBundle.loadString('assets/data/biblia.json');
-    } catch (_) {
-      jsonStr = await rootBundle.loadString('assets/data/biblia_exemplo.json');
-    }
+    final jsonStr = await rootBundle.loadString('assets/data/biblia.json');
 
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       dados = json.decode(jsonStr) as Map<String, dynamic>;
       favoritosVersiculos =
@@ -170,8 +168,8 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
   Future<void> _configurarTts() async {
     await _tts.setLanguage('pt-BR');
-    await _tts.setSpeechRate(0.52);
-    await _tts.setPitch(0.96);
+    await _tts.setSpeechRate(0.50);
+    await _tts.setPitch(1.0);
     await _tts.setVolume(1.0);
 
     final prefs = await SharedPreferences.getInstance();
@@ -297,6 +295,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
         _leituraAtiva = true;
       });
     });
+    await _tts.awaitSpeakCompletion(true);
   }
 
   Future<void> _selecionarVozPorId(String? vozId) async {
@@ -314,9 +313,10 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('voz_tts_id', escolhida.id);
 
+    final idSelecionada = escolhida.id;
     if (mounted) {
       setState(() {
-        _vozSelecionadaId = escolhida!.id;
+        _vozSelecionadaId = idSelecionada;
       });
     }
   }
@@ -350,19 +350,15 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     if (texto.isEmpty) return;
 
     await _tts.stop();
-    if (mounted) {
-      setState(() {
-        _textoLeituraAtual = texto;
-        _falando = false;
-        _pausado = false;
-        _leituraAtiva = true;
-      });
-    } else {
+    if (!mounted) return;
+
+    setState(() {
       _textoLeituraAtual = texto;
       _falando = false;
       _pausado = false;
       _leituraAtiva = true;
-    }
+    });
+
     await _tts.speak(texto);
   }
 
@@ -383,7 +379,19 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     }
 
     // Continuar leitura pausada.
-    // No flutter_tts, chamar speak() novamente retoma a fala pausada.
+    if (_pausado) {
+      await _tts.speak('');
+      if (mounted) {
+        setState(() {
+          _falando = true;
+          _pausado = false;
+          _leituraAtiva = true;
+        });
+      }
+      return;
+    }
+
+    // Se há texto pendente e o TTS foi interrompido, inicia leitura novamente.
     final texto = _textoLeituraAtual;
     if (texto == null || texto.isEmpty) return;
     await _tts.speak(texto);
@@ -406,6 +414,11 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
         tooltip: rotulo,
         onPressed: _leituraAtiva ? _alternarPlayPause : null,
         icon: Icon(icone, size: 28),
+        style: IconButton.styleFrom(
+          minimumSize: const Size(52, 52),
+          tapTargetSize: MaterialTapTargetSize.padded,
+          padding: const EdgeInsets.all(10),
+        ),
       );
     }
 
@@ -429,6 +442,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
   Future<void> _toggleFavoritoVersiculo(String chave) async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       if (favoritosVersiculos.contains(chave)) {
         favoritosVersiculos.remove(chave);
@@ -444,6 +458,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
   Future<void> _toggleFavoritoCapitulo(String chave) async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       if (favoritosCapitulos.contains(chave)) {
         favoritosCapitulos.remove(chave);
@@ -558,6 +573,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+      physics: const ClampingScrollPhysics(),
+      dragStartBehavior: DragStartBehavior.down,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Column(
         children: [
           Text(
@@ -622,26 +640,48 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    FilledButton.icon(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final botaoOuvir = FilledButton.icon(
                       onPressed: referencia.isEmpty
                           ? null
                           : () => _falarVersiculo(referencia, versiculo),
                       icon: const Icon(Icons.volume_up),
                       label: const Text('Ouvir versículo'),
-                    ),
-                    OutlinedButton.icon(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                      ),
+                    );
+                    final botaoSalvar = OutlinedButton.icon(
                       onPressed: referencia.isEmpty
                           ? null
                           : () => _toggleFavoritoVersiculo(referencia),
                       icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
                       label: Text(isFav ? 'Salvo' : 'Salvar versículo'),
-                    ),
-                  ],
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                      ),
+                    );
+
+                    // Em telas muito estreitas, empilha os botões para evitar overflow.
+                    if (constraints.maxWidth < 420) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(width: double.infinity, child: botaoOuvir),
+                          const SizedBox(height: 10),
+                          SizedBox(width: double.infinity, child: botaoSalvar),
+                        ],
+                      );
+                    }
+
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      alignment: WrapAlignment.center,
+                      children: [botaoOuvir, botaoSalvar],
+                    );
+                  },
                 ),
               ],
             ),
@@ -721,7 +761,10 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   Widget _montarTelaLeitura() {
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: (dados!['livros'] as List).length,
+      physics: const ClampingScrollPhysics(),
+      dragStartBehavior: DragStartBehavior.down,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      itemCount: (dados!['livros'] as List?)?.length ?? 0,
       itemBuilder: (context, i) {
         final livro = dados!['livros'][i] as Map<String, dynamic>;
         final nomeLivro = '${livro['nome']}';
@@ -731,6 +774,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           child: ExpansionTile(
             key: PageStorageKey<String>('livro_$nomeLivro'),
+            maintainState: true,
             collapsedShape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -925,6 +969,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
     return ListView(
       padding: const EdgeInsets.all(16),
+      physics: const ClampingScrollPhysics(),
+      dragStartBehavior: DragStartBehavior.down,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: itens,
     );
   }
@@ -934,6 +981,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
     return ListView(
       padding: const EdgeInsets.all(16),
+      physics: const ClampingScrollPhysics(),
+      dragStartBehavior: DragStartBehavior.down,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
         SwitchListTile(
           title: const Text('Tema escuro'),

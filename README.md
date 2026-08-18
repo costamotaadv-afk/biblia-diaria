@@ -32,19 +32,17 @@ desenvolvedor) OU abra um emulador pelo Android Studio.
 
 ## 4. Como editar o conteúdo (versículos e mensagens)
 
-Abra o arquivo assets/data/biblia_exemplo.json. Ele é só texto — você pode
-adicionar livros, capítulos e versículos seguindo o mesmo formato que já está lá.
-Depois de editar, salve o arquivo e rode flutter pub get de novo (ou aperte
-"Hot Restart" no VS Code, ícone de raio com um R).
+Abra o arquivo assets/data/biblia.json. Ele é só texto — você pode adicionar,
+remover ou ajustar livros, capítulos, versículos e mensagens seguindo o mesmo
+formato que já está lá. Depois de editar, salve o arquivo e aperte "Hot Restart"
+no VS Code (ícone de raio com um R).
 
-Importante: este arquivo de exemplo tem só 2 livros. Você vai precisar do
-texto completo da Bíblia em português (domínio público, como Almeida Corrigida
-Fiel ou João Ferreira de Almeida) organizado nesse mesmo formato JSON antes de
-publicar de verdade.
+Importante: este arquivo já contém a Bíblia completa em português (66 livros,
+de Gênesis a Apocalipse) em domínio público, além das mensagens diárias.
 
 ## 5. Próximos passos (nesta ordem sugerida)
 
-1. Substituir biblia_exemplo.json pelo texto bíblico completo.
+1. ~~Substituir biblia_exemplo.json pelo texto bíblico completo.~~ ✔ Concluído
 2. Criar conta no Google AdMob e seguir a documentação oficial do pacote
 google_mobile_ads para inserir um banner.
 3. Adicionar o pacote url_launcher para o botão "Apoiar o projeto" abrir seu
