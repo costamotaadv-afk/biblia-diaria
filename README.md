@@ -59,6 +59,10 @@ link de doação de verdade (Pix, PayPal, Buy Me a Coffee etc.).
 5. Gerar o build final:
    flutter build appbundle   (para Google Play e Galaxy Store)
    flutter build ipa         (para App Store — precisa de Mac)
+   ⏸️ Aguardando: ainda não foi gerado porque o Android SDK não está instalado
+   nesta máquina. Instale o Android Studio (https://developer.android.com/studio)
+   e ele instalará o Android SDK no primeiro uso. Depois, na pasta do projeto,
+   rode: flutter build appbundle
 
 ## 6. Configuração do AdMob (Etapa 2)
 
