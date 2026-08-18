@@ -50,6 +50,8 @@ google_mobile_ads para inserir um banner.
    a conta AdMob e trocar pelos IDs reais.
 3. Adicionar o pacote url_launcher para o botão "Apoiar o projeto" abrir seu
 link de doação de verdade (Pix, PayPal, Buy Me a Coffee etc.).
+   ✔ Concluído — o botão "Apoiar o projeto" já existe na aba Ajustes e usa o
+   url_launcher. Falta apenas trocar o link (veja a seção 7).
 4. Criar o ícone do app e ajustar cores/fontes.
 5. Gerar o build final:
    flutter build appbundle   (para Google Play e Galaxy Store)
@@ -82,9 +84,26 @@ de teste" no console do AdMob, para ver anúncios de teste em vez dos reais.
 > o AdMob. Se preferir manter só web/windows, o banner ficará invisível nesses alvos
 > (anúncios do AdMob não rodam em navegador ou desktop).
 
+## 7. Configuração do link de doação (Etapa 3)
+
+O botão "Apoiar o projeto" (na aba Ajustes) abre um link de doação. Por enquanto
+ele aponta para um endereço de exemplo. Para configurar o seu link real:
+
+1. Crie seu link de doação em um serviço de sua preferência:
+   (Pix com chave copia-e-cola é comum no Brasil; também existem PayPal e
+   Buy Me a Coffee).
+2. No arquivo lib/main.dart, localize a constante _urlDoacao (logo acima do
+   método que monta a aba Ajustes) e troque o endereço pelo seu link real:
+   static const String _urlDoacao = 'SEU_LINK_AQUI';
+3. Salve e faça Hot Restart. O botão passará a abrir o seu link.
+
+> Em produção, evite usar link de exemplo. Links de Pix, PayPal ou Buy Me a
+> Coffee costumam abrir no navegador ou no próprio aplicativo de pagamento.
+
 ## Se algo der errado
 
 - flutter doctor sempre mostra o que está faltando — leia a mensagem com calma,
   quase sempre ela já diz o comando exato para resolver.
 - Erro comum: esquecer de rodar flutter pub get depois de mudar o pubspec.yaml.
+
 

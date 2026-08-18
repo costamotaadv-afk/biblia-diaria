@@ -8,6 +8,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'widgets/banner_anuncio.dart';
 
@@ -983,6 +984,27 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     );
   }
 
+  /// LINK DE DOACAO (Etapa 3):
+  /// Troque este endereco pelo seu link de doacao real (Pix, PayPal,
+  /// Buy Me a Coffee etc.). Nao use "exemplo.com" em producao.
+  static const String _urlDoacao =
+      'https://www.buymeacoffee.com/exemplo';
+
+  Future<void> _abrirLinkDoacao() async {
+    final uri = Uri.parse(_urlDoacao);
+    final abriu = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!abriu && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nao foi possivel abrir o link de doacao.'),
+        ),
+      );
+    }
+  }
+
   Widget _montarTelaAjustes() {
     final temVozes = _vozesDisponiveis.isNotEmpty;
 
@@ -1087,6 +1109,57 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                       label: const Text('Voz feminina'),
                     ),
                   ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          elevation: 0,
+          color: Theme.of(context).colorScheme.primaryContainer.withValues(
+                alpha: 0.6,
+              ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.favorite_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Apoiar o projeto',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Este aplicativo é gratuito e não contém rastreadores. '
+                  'Se ele te ajudou, considere apoiar para mantê-lo no ar.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _abrirLinkDoacao,
+                    icon: const Icon(Icons.card_giftcard),
+                    label: const Text('Fazer uma doação'),
+                  ),
                 ),
               ],
             ),
