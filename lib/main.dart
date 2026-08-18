@@ -78,22 +78,51 @@ class _BibliaAppState extends State<BibliaApp> {
     await prefs.setBool('fonte_grande', valor);
   }
 
+  /// Cor de destaque (dourado suave, remete a enfeite/borda de Bíblia).
+  static const Color _dourado = Color(0xFFB49A00);
+
+  /// Monta o tema (claro ou escuro) com uma paleta coerente, pensada para
+  /// boa legibilidade de pessoas idosas: contraste alto e destaques quentes.
+  ThemeData _construirTema(Brightness brightness) {
+    final esquema = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF3F51B5), // índigo
+      brightness: brightness,
+      secondary: _dourado,
+    );
+
+    final base = ThemeData(
+      useMaterial3: true,
+      colorScheme: esquema,
+      brightness: brightness,
+    );
+
+    // Ajustes de tipografia para legibilidade em telas de celular.
+    return base.copyWith(
+      textTheme: base.textTheme.copyWith(
+        headlineSmall: base.textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+        titleLarge: base.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+        titleMedium: base.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      appBarTheme: base.appBarTheme.copyWith(
+        centerTitle: true,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Bíblia Diária',
       debugShowCheckedModeBanner: false,
       themeMode: temaEscuro ? ThemeMode.dark : ThemeMode.light,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF3F51B5),
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF3F51B5),
-        brightness: Brightness.dark,
-      ),
+      theme: _construirTema(Brightness.light),
+      darkTheme: _construirTema(Brightness.dark),
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         final escala = fonteGrande ? 1.18 : 1.0;

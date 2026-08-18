@@ -53,6 +53,9 @@ link de doação de verdade (Pix, PayPal, Buy Me a Coffee etc.).
    ✔ Concluído — o botão "Apoiar o projeto" já existe na aba Ajustes e usa o
    url_launcher. Falta apenas trocar o link (veja a seção 7).
 4. Criar o ícone do app e ajustar cores/fontes.
+   ✔ Concluído — o ícone (livro com coração, fundo índigo) foi gerado para
+   Android e o tema recebeu uma paleta com destaque dourado e tipografia mais
+   legível. A imagem-base fica em assets/icon/app_icon.png.
 5. Gerar o build final:
    flutter build appbundle   (para Google Play e Galaxy Store)
    flutter build ipa         (para App Store — precisa de Mac)
