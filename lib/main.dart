@@ -4,13 +4,18 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'widgets/banner_anuncio.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
+  // Inicializa o SDK de anúncios do Google (AdMob) antes de abrir o app.
+  MobileAds.instance.initialize();
   runApp(const BibliaApp());
 }
 
@@ -721,7 +726,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               ),
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 8),
+          const BannerAnuncio(),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(

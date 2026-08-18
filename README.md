@@ -45,6 +45,9 @@ de Gênesis a Apocalipse) em domínio público, além das mensagens diárias.
 1. ~~Substituir biblia_exemplo.json pelo texto bíblico completo.~~ ✔ Concluído
 2. Criar conta no Google AdMob e seguir a documentação oficial do pacote
 google_mobile_ads para inserir um banner.
+   🟡 Em andamento: o banner já foi inserido em código usando os
+   identificadores de TESTE do Google (veja a seção 6 abaixo). Falta só criar
+   a conta AdMob e trocar pelos IDs reais.
 3. Adicionar o pacote url_launcher para o botão "Apoiar o projeto" abrir seu
 link de doação de verdade (Pix, PayPal, Buy Me a Coffee etc.).
 4. Criar o ícone do app e ajustar cores/fontes.
@@ -52,8 +55,36 @@ link de doação de verdade (Pix, PayPal, Buy Me a Coffee etc.).
    flutter build appbundle   (para Google Play e Galaxy Store)
    flutter build ipa         (para App Store — precisa de Mac)
 
+## 6. Configuração do AdMob (Etapa 2)
+
+O app já traz o banner de anúncio configurado, mas com os IDs de TESTE do
+Google. Para publicar de verdade, você precisa:
+
+1. Em https://admob.google.com , crie sua conta e registre o aplicativo.
+2. No console, anote dois valores:
+   - App ID (formato: ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY)
+   - ID do bloco de anúncios de banner (formato: ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY)
+   (crie um bloco de banner nas configurações do app, se ainda não existir).
+3. Localize e troque os IDs de teste pelos seus IDs reais em DOIUS lugares:
+
+   a) AndroidManifest.xml:
+      O App ID está no arquivo android/app/src/main/AndroidManifest.xml, na
+      linha <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID">.
+
+   b) lib/widgets/banner_anuncio.dart:
+      O ID do banner está na constante _bannerAdUnitId no topo desse arquivo.
+
+4. (Opcional, recomendado para teste) Adicione o seu aparelho como "Dispositivo
+de teste" no console do AdMob, para ver anúncios de teste em vez dos reais.
+5. Item 2 será marcado como concluído quando os IDs reais forem colocados.
+
+> Importante: a plataforma Android foi adicionada ao projeto apenas para viabilizar
+> o AdMob. Se preferir manter só web/windows, o banner ficará invisível nesses alvos
+> (anúncios do AdMob não rodam em navegador ou desktop).
+
 ## Se algo der errado
 
 - flutter doctor sempre mostra o que está faltando — leia a mensagem com calma,
   quase sempre ela já diz o comando exato para resolver.
 - Erro comum: esquecer de rodar flutter pub get depois de mudar o pubspec.yaml.
+
