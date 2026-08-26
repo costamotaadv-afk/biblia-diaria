@@ -1,7 +1,8 @@
 # Bíblia App — Guia para começar (nível zero)
 
 Este é um projeto inicial funcional. Ele já tem: leitura de versículos, favoritos
-salvos no aparelho, e tema claro/escuro. Falta ligar anúncios e doações de verdade.
+salvos no aparelho, tema claro/escuro e doações via Pix. Falta ligar os anúncios
+de produção.
 
 ## 1. Instalar o essencial (uma vez só)
 
@@ -48,10 +49,9 @@ google_mobile_ads para inserir um banner.
    🟡 Em andamento: o banner já foi inserido em código usando os
    identificadores de TESTE do Google (veja a seção 6 abaixo). Falta só criar
    a conta AdMob e trocar pelos IDs reais.
-3. Adicionar o pacote url_launcher para o botão "Apoiar o projeto" abrir seu
-link de doação de verdade (Pix, PayPal, Buy Me a Coffee etc.).
-   ✔ Concluído — o botão "Apoiar o projeto" já existe na aba Ajustes e usa o
-   url_launcher. Falta apenas trocar o link (veja a seção 7).
+3. Configurar o botão "Apoiar o projeto" para receber doações via Pix.
+   ✔ Concluído — a chave Pix da conta Nubank está configurada na aba Ajustes,
+   com botão para copiar e instruções acessíveis (veja a seção 7).
 4. Criar o ícone do app e ajustar cores/fontes.
    ✔ Concluído — o ícone (livro com coração, fundo índigo) foi gerado para
    Android e o tema recebeu uma paleta com destaque dourado e tipografia mais
@@ -91,21 +91,20 @@ de teste" no console do AdMob, para ver anúncios de teste em vez dos reais.
 > o AdMob. Se preferir manter só web/windows, o banner ficará invisível nesses alvos
 > (anúncios do AdMob não rodam em navegador ou desktop).
 
-## 7. Configuração do link de doação (Etapa 3)
+## 7. Configuração da doação via Pix (Etapa 3)
 
-O botão "Apoiar o projeto" (na aba Ajustes) abre um link de doação. Por enquanto
-ele aponta para um endereço de exemplo. Para configurar o seu link real:
+A aba Ajustes apresenta a chave Pix vinculada à conta Nubank. O botão principal
+copia a chave e abre instruções grandes e numeradas, facilitando o uso por pessoas
+idosas. O doador pode concluir a transferência no Nubank ou em qualquer banco.
 
-1. Crie seu link de doação em um serviço de sua preferência:
-   (Pix com chave copia-e-cola é comum no Brasil; também existem PayPal e
-   Buy Me a Coffee).
-2. No arquivo lib/main.dart, localize a constante _urlDoacao (logo acima do
-   método que monta a aba Ajustes) e troque o endereço pelo seu link real:
-   static const String _urlDoacao = 'SEU_LINK_AQUI';
-3. Salve e faça Hot Restart. O botão passará a abrir o seu link.
+A chave está definida na constante `_chavePix`, no arquivo `lib/main.dart`:
 
-> Em produção, evite usar link de exemplo. Links de Pix, PayPal ou Buy Me a
-> Coffee costumam abrir no navegador ou no próprio aplicativo de pagamento.
+    static const String _chavePix = 'costamota@gmail.com';
+
+Para alterar a conta no futuro, substitua somente esse valor e faça Hot Restart.
+Antes de publicar, confirme no Nubank que a chave continua ativa e teste uma
+transferência de valor baixo. O aplicativo também orienta o usuário a conferir o
+nome do recebedor no banco antes de confirmar.
 
 ## Se algo der errado
 

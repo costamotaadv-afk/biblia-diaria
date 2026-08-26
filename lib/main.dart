@@ -4,19 +4,23 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import 'cache_livros.dart';
+import 'config.dart';
+import 'dados_seguros.dart';
+import 'leitura_natural.dart';
+import 'platform_support.dart';
 import 'widgets/banner_anuncio.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
-  // Inicializa o SDK de anúncios do Google (AdMob) antes de abrir o app.
-  MobileAds.instance.initialize();
+  // O plugin não possui implementação para web ou desktop. A inicialização
+  // engole erros (sem Google Play Services etc.) para nunca impedir o app.
+  await inicializarAdMob();
   runApp(const BibliaApp());
 }
 
@@ -34,14 +38,20 @@ class VozTts {
   });
 
   String get label {
-    final generoLegivel =
-        gender.contains('male') ? 'Masculina' : gender.contains('female') ? 'Feminina' : 'Neutra';
+    final generoLegivel = gender.contains('male')
+        ? 'Masculina'
+        : gender.contains('female')
+            ? 'Feminina'
+            : 'Neutra';
     return '$name ($locale, $generoLegivel)';
   }
 }
 
 class BibliaApp extends StatefulWidget {
-  const BibliaApp({super.key});
+  /// Relógio injetável para testes de virada de dia (caso B4 de QA).
+  final DateTime Function()? relogio;
+
+  const BibliaApp({super.key, this.relogio});
 
   @override
   State<BibliaApp> createState() => _BibliaAppState();
@@ -132,6 +142,7 @@ class _BibliaAppState extends State<BibliaApp> {
         );
       },
       home: TelaPrincipal(
+        relogio: widget.relogio,
         temaEscuro: temaEscuro,
         onToggleTema: _atualizarTema,
         fonteGrande: fonteGrande,
@@ -142,6 +153,8 @@ class _BibliaAppState extends State<BibliaApp> {
 }
 
 class TelaPrincipal extends StatefulWidget {
+  /// Relógio injetável para testes de virada de dia (caso B4 de QA).
+  final DateTime Function()? relogio;
   final bool temaEscuro;
   final ValueChanged<bool> onToggleTema;
   final bool fonteGrande;
@@ -149,6 +162,7 @@ class TelaPrincipal extends StatefulWidget {
 
   const TelaPrincipal({
     super.key,
+    this.relogio,
     required this.temaEscuro,
     required this.onToggleTema,
     required this.fonteGrande,
@@ -161,7 +175,12 @@ class TelaPrincipal extends StatefulWidget {
 
 class _TelaPrincipalState extends State<TelaPrincipal> {
   int aba = 0;
-  Map<String, dynamic>? dados;
+  // Carregamento sob demanda: índice leve + mensagens, e cada livro só quando
+  // o usuário o abre. Evita baixar os ~13MB todos de uma vez (crítico na web).
+  List<Map<String, dynamic>> _indice = [];
+  List<String> _mensagens = [];
+  late final CacheDeLivros _cacheLivros;
+  bool _carregamentoInicial = true;
   Set<String> favoritosVersiculos = {};
   Set<String> favoritosCapitulos = {};
   final FlutterTts _tts = FlutterTts();
@@ -174,36 +193,139 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   String? _vozMasculinaId;
   String? _vozFemininaId;
 
+  /// Sinaliza se o TTS está de fato disponível nesta plataforma/dispositivo.
+  /// Começa otimista pelo suporte de plataforma e vira `false` se a
+  /// configuração falhar (ex.: plugin ausente na web).
+  bool _ttsDisponivel = suportaTts;
+
+  // Filas de escrita serializadas: garantem que escritas concorrentes de
+  // favoritos no SharedPreferences respeitem a ordem (last-write-wins),
+  // evitando race entre memória e disco (caso C4 da matriz de QA).
+  Future<void> _escritaFavVersiculos = Future<void>.value();
+  Future<void> _escritaFavCapitulos = Future<void>.value();
+
   @override
   void initState() {
     super.initState();
+    _cacheLivros = CacheDeLivros(carregador: _carregarLivroMap);
     _carregar();
     _configurarTts();
   }
 
   @override
   void dispose() {
-    _tts.stop();
+    // Em plataformas sem plugin (web), o stop lançaria exceção assíncrona;
+    // o catchError evita erro não tratado (caso C11 da matriz de QA).
+    _tts.stop().catchError((Object _) {});
     super.dispose();
   }
 
-  Future<void> _carregar() async {
-    final jsonStr = await rootBundle.loadString('assets/data/biblia.json');
+  /// Data/hora atual; injetável via [TelaPrincipal.relogio] para testar a
+  /// virada do dia com o app aberto (caso B4 da matriz de QA).
+  DateTime get _agora => (widget.relogio ?? DateTime.now)();
 
+  /// Carrega somente o essencial na abertura (índice leve, mensagens) e o
+  /// livro escolhido para o versículo do dia. Os demais livros são carregados
+  /// sob demanda ao navegar.
+  Future<void> _carregar() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
+
+    List<Map<String, dynamic>> indice = [];
+    try {
+      final indiceJson = await rootBundle.loadString('assets/data/indice.json');
+      indice = (json.decode(indiceJson) as List)
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+    } catch (_) {
+      indice = [];
+    }
+
+    List<String> mensagens = [];
+    try {
+      final msgJson = await rootBundle.loadString('assets/data/mensagens.json');
+      mensagens = normalizarMensagens(json.decode(msgJson));
+    } catch (_) {
+      mensagens = [];
+    }
+
+    // Distribui o conteúdo diário pelos 66 livros sem carregar a Bíblia inteira.
+    final diasDecorridos = diasDesdeEpoca(_agora);
+    final nomeLivroDoDia = indice.isEmpty
+        ? null
+        : '${indice[diasDecorridos % indice.length]['nome']}';
+    final livroDoDia =
+        nomeLivroDoDia == null ? null : await _carregarLivroMap(nomeLivroDoDia);
+
+    if (!mounted) return;
     setState(() {
-      dados = json.decode(jsonStr) as Map<String, dynamic>;
+      _indice = indice;
+      _mensagens = mensagens;
+      if (livroDoDia != null) {
+        _cacheLivros.cache['${livroDoDia['nome']}'] = livroDoDia;
+      }
       favoritosVersiculos =
           (prefs.getStringList('favoritos_versiculos') ?? []).toSet();
       favoritosCapitulos =
           (prefs.getStringList('favoritos_capitulos') ?? []).toSet();
+      _carregamentoInicial = false;
     });
   }
 
+  /// Lê o JSON de um livro da pasta assets/data/livros/<nome>.json.
+  Future<Map<String, dynamic>?> _carregarLivroMap(String nomeLivro) async {
+    if (_cacheLivros.cache.containsKey(nomeLivro)) {
+      return _cacheLivros.cache[nomeLivro];
+    }
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/data/livros/$nomeLivro.json');
+      return json.decode(jsonStr) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Garante que o livro está no cache; se não, busca e guarda. É chamado
+  /// antes de montar/blindar qualquer tela que precise do conteúdo do livro.
+  /// Garante que o livro está no cache; se não, busca e guarda (com retry em
+  /// falha transiente — caso C5 da matriz de QA).
+  Future<Map<String, dynamic>?> _assegurarLivro(String nomeLivro) {
+    return _cacheLivros.assegurar(nomeLivro);
+  }
+
   Future<void> _configurarTts() async {
+    // Em plataformas sem plugin (web, Linux) o TTS não existe: desabilita a
+    // feature e evita MissingPluginException (caso C11 da matriz de QA).
+    if (!suportaTts) {
+      if (mounted) {
+        setState(() => _ttsDisponivel = false);
+      }
+      return;
+    }
+    try {
+      await _configurarTtsInterno();
+    } catch (_) {
+      // Falha ao configurar o TTS (engine ausente, permissões, etc.): o app
+      // segue funcionando, apenas sem leitura em voz alta.
+      if (mounted) {
+        setState(() => _ttsDisponivel = false);
+      }
+    }
+  }
+
+  /// Velocidade da fala em voz alta.
+  ///
+  /// 1.0 é a velocidade normal do motor nativo (Google TTS no Android,
+  /// AVSpeechSynthesizer no iOS). 0.85 fica levemente mais pausada: soa mais
+  /// humana, menos robótica, e melhora a compreensão de pessoas idosas.
+  static const double _velocidadeFala = 0.85;
+
+  Future<void> _configurarTtsInterno() async {
+    // Usa o motor nativo do aparelho (sem custo e offline).
     await _tts.setLanguage('pt-BR');
-    await _tts.setSpeechRate(0.50);
+    await _tts.setSpeechRate(_velocidadeFala);
     await _tts.setPitch(1.0);
     await _tts.setVolume(1.0);
 
@@ -239,7 +361,34 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
         }
       }
 
-      vozes.sort((a, b) => a.label.compareTo(b.label));
+      // Pontua cada voz: vozes neurais/naturais ficam no topo da lista,
+      // evitando selecionar a voz padrão robotizada do dispositivo.
+      int pontuacao(VozTts voz) {
+        final nome = voz.name.toLowerCase();
+        final loc = voz.locale.toLowerCase();
+        var pts = 0;
+        if (loc.contains('pt-br')) pts += 100;
+        if (loc.contains('pt-pt')) pts += 60;
+        // Marcadores comuns de vozes de alta qualidade (Google/Android).
+        if (nome.contains('neural') || nome.contains('enhanced')) pts += 80;
+        if (nome.contains('online') ||
+            nome.contains('wavenet') ||
+            nome.contains('high') ||
+            nome.contains('quality') ||
+            nome.contains('studio')) {
+          pts += 50;
+        }
+        // Preferência por feminina na leitura da Bíblia (mais suave), mas não
+        // obrigatório — o usuário pode trocar nos Ajustes.
+        if (voz.gender.contains('female')) pts += 10;
+        return pts;
+      }
+
+      vozes.sort((a, b) {
+        final cmp = pontuacao(b).compareTo(pontuacao(a));
+        if (cmp != 0) return cmp;
+        return a.label.compareTo(b.label);
+      });
       VozTts? escolhida;
 
       if (vozes.isNotEmpty) {
@@ -253,22 +402,31 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
         }
 
         for (final voz in vozes) {
-          if (voz.locale.toLowerCase().contains('pt-br') && voz.gender.contains('male')) {
+          if (voz.locale.toLowerCase().contains('pt-br') &&
+              voz.gender.contains('male')) {
             _vozMasculinaId = voz.id;
             break;
           }
         }
 
         for (final voz in vozes) {
-          if (voz.locale.toLowerCase().contains('pt-br') && voz.gender.contains('female')) {
+          if (voz.locale.toLowerCase().contains('pt-br') &&
+              voz.gender.contains('female')) {
             _vozFemininaId = voz.id;
             break;
           }
         }
 
         escolhida ??= vozes.firstWhere(
-          (voz) => voz.locale.toLowerCase().contains('pt-br') && voz.gender.contains('male'),
-          orElse: () => vozes.first,
+          (voz) =>
+              voz.locale.toLowerCase().contains('pt-br') &&
+              voz.gender.contains('female'),
+          orElse: () => vozes.firstWhere(
+            (voz) =>
+                voz.locale.toLowerCase().contains('pt-br') &&
+                voz.gender.contains('male'),
+            orElse: () => vozes.first,
+          ),
         );
       }
 
@@ -366,8 +524,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     // Garante que apenas este versículo específico será lido.
     // Não há reprodução continuada para o versículo seguinte de forma automática,
     // respeitando a autonomia e o ritmo de leitura do usuário.
-    final textoAjustado = _textoParaLeituraNatural(texto);
-    await _iniciarLeitura('$referencia. $textoAjustado');
+    final refAjustada = referenciaParaLeitura(referencia);
+    final textoAjustado = textoParaLeituraNatural(texto);
+    await _iniciarLeitura('$refAjustada. $textoAjustado');
   }
 
   Future<void> _falarCapitulo(String chaveCapitulo) async {
@@ -376,15 +535,20 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     // e não avança de forma alguma para o capítulo seguinte de modo automático.
     final texto = _buscarTextoCapitulo(chaveCapitulo);
     if (texto == null || texto.trim().isEmpty) return;
-    final textoAjustado = _textoParaLeituraNatural(texto);
-    await _iniciarLeitura('$chaveCapitulo. $textoAjustado');
+    final refAjustada = referenciaParaLeitura(chaveCapitulo);
+    await _iniciarLeitura('$refAjustada. $texto');
   }
 
   Future<void> _iniciarLeitura(String textoCompleto) async {
     final texto = textoCompleto.trim();
     if (texto.isEmpty) return;
 
-    await _tts.stop();
+    try {
+      await _tts.stop();
+    } catch (_) {
+      if (mounted) setState(() => _ttsDisponivel = false);
+      return;
+    }
     if (!mounted) return;
 
     setState(() {
@@ -394,7 +558,16 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       _leituraAtiva = true;
     });
 
-    await _tts.speak(texto);
+    try {
+      await _tts.speak(texto);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _ttsDisponivel = false;
+          _leituraAtiva = false;
+        });
+      }
+    }
   }
 
   Future<void> _alternarPlayPause() async {
@@ -402,7 +575,12 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
     // Pausar leitura em andamento.
     if (_falando || (!_pausado && _leituraAtiva)) {
-      await _tts.pause();
+      try {
+        await _tts.pause();
+      } catch (_) {
+        if (mounted) setState(() => _ttsDisponivel = false);
+        return;
+      }
       if (mounted) {
         setState(() {
           _falando = false;
@@ -415,7 +593,12 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
     // Continuar leitura pausada.
     if (_pausado) {
-      await _tts.speak('');
+      try {
+        await _tts.speak('');
+      } catch (_) {
+        if (mounted) setState(() => _ttsDisponivel = false);
+        return;
+      }
       if (mounted) {
         setState(() {
           _falando = true;
@@ -429,7 +612,12 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     // Se há texto pendente e o TTS foi interrompido, inicia leitura novamente.
     final texto = _textoLeituraAtual;
     if (texto == null || texto.isEmpty) return;
-    await _tts.speak(texto);
+    try {
+      await _tts.speak(texto);
+    } catch (_) {
+      if (mounted) setState(() => _ttsDisponivel = false);
+      return;
+    }
     if (mounted) {
       setState(() {
         _falando = true;
@@ -440,8 +628,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 
   Widget _botaoPlayPause({bool compacto = false}) {
-    final icone =
-        (_falando && !_pausado) ? Icons.pause_rounded : Icons.play_arrow_rounded;
+    final icone = (_falando && !_pausado)
+        ? Icons.pause_rounded
+        : Icons.play_arrow_rounded;
     final rotulo = (_falando && !_pausado) ? 'Pausar' : 'Continuar';
 
     if (compacto) {
@@ -464,62 +653,72 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     );
   }
 
-  String _textoParaLeituraNatural(String texto) {
-    return texto
-        .replaceAll(' - ', ', ')
-        .replaceAll(';', ', ')
-        .replaceAll(':', ': ')
-        .replaceAll('"', '')
-        .replaceAllMapped(RegExp(r'\b(\d+)\.'), (m) => '${m.group(1)}. ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-  }
-
   Future<void> _toggleFavoritoVersiculo(String chave) async {
-    final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      if (favoritosVersiculos.contains(chave)) {
-        favoritosVersiculos.remove(chave);
-      } else {
+      if (!favoritosVersiculos.remove(chave)) {
         favoritosVersiculos.add(chave);
       }
     });
-    await prefs.setStringList(
-      'favoritos_versiculos',
-      favoritosVersiculos.toList(),
-    );
+    await _persistirFavoritosVersiculos();
   }
 
   Future<void> _toggleFavoritoCapitulo(String chave) async {
-    final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      if (favoritosCapitulos.contains(chave)) {
-        favoritosCapitulos.remove(chave);
-      } else {
+      if (!favoritosCapitulos.remove(chave)) {
         favoritosCapitulos.add(chave);
       }
     });
-    await prefs.setStringList(
-      'favoritos_capitulos',
-      favoritosCapitulos.toList(),
-    );
+    await _persistirFavoritosCapitulos();
+  }
+
+  /// Persistência serializada de favoritos: encadeia as escritas em uma fila
+  /// para que toques concorrentes (duplo-toque, toques em abas diferentes)
+  /// respeitem a ordem last-write-wins — memória e disco nunca divergem (C4).
+  Future<void> _persistirFavoritosVersiculos() {
+    final snapshot = favoritosVersiculos.toList();
+    _escritaFavVersiculos = _escritaFavVersiculos.then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('favoritos_versiculos', snapshot);
+    });
+    return _escritaFavVersiculos;
+  }
+
+  Future<void> _persistirFavoritosCapitulos() {
+    final snapshot = favoritosCapitulos.toList();
+    _escritaFavCapitulos = _escritaFavCapitulos.then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('favoritos_capitulos', snapshot);
+    });
+    return _escritaFavCapitulos;
   }
 
   String _chaveCapitulo(String livroNome, dynamic numeroCapitulo) {
     return '$livroNome $numeroCapitulo';
   }
 
+  String? _nomeLivroDaChave(String chave) {
+    // Usa o índice em vez de separar por espaços, pois vários livros têm nome
+    // composto ou começam com número (por exemplo, "1 Coríntios").
+    for (final item in _indice.reversed) {
+      final nome = '${item['nome']}';
+      if (chave.startsWith('$nome ')) return nome;
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> _assegurarLivroDaChave(String chave) {
+    final nome = _nomeLivroDaChave(chave);
+    return nome == null ? Future.value() : _assegurarLivro(nome);
+  }
+
   String? _buscarTextoVersiculo(String chave) {
-    if (dados == null) return null;
-    final livros = (dados!['livros'] as List?) ?? [];
-    for (final livroRaw in livros) {
-      final livro = livroRaw as Map<String, dynamic>;
-      final capitulos = (livro['capitulos'] as List?) ?? [];
+    for (final livro in _cacheLivros.cache.values) {
+      final capitulos = comoLista(livro['capitulos']) ?? [];
       for (final capRaw in capitulos) {
         final cap = capRaw as Map<String, dynamic>;
-        final versiculos = (cap['versiculos'] as List?) ?? [];
+        final versiculos = comoLista(cap['versiculos']) ?? [];
         for (final vRaw in versiculos) {
           final v = vRaw as Map<String, dynamic>;
           final ref = '${livro['nome']} ${cap['numero']}:${v['numero']}';
@@ -533,22 +732,18 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 
   String? _buscarTextoCapitulo(String chaveCapitulo) {
-    if (dados == null) return null;
-    final livros = (dados!['livros'] as List?) ?? [];
-    for (final livroRaw in livros) {
-      final livro = livroRaw as Map<String, dynamic>;
-      final capitulos = (livro['capitulos'] as List?) ?? [];
+    for (final livro in _cacheLivros.cache.values) {
+      final capitulos = comoLista(livro['capitulos']) ?? [];
       for (final capRaw in capitulos) {
         final cap = capRaw as Map<String, dynamic>;
         final chave = _chaveCapitulo('${livro['nome']}', cap['numero']);
         if (chave == chaveCapitulo) {
-          final versiculos = (cap['versiculos'] as List?) ?? [];
-          final textos = versiculos
-              .map((v) {
-                final item = v as Map<String, dynamic>;
-                return '${item['numero']}. ${item['texto']}';
-              })
-               .toList();
+          final versiculos = comoLista(cap['versiculos']) ?? [];
+          final textos = versiculos.map((v) {
+            final item = v as Map<String, dynamic>;
+            final numPorExtenso = numeroPorExtenso('${item['numero']}');
+            return 'Versículo $numPorExtenso. ${item['texto']}';
+          }).toList();
           return textos.join(' ');
         }
       }
@@ -557,48 +752,19 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 
   Map<String, String> _conteudoDoDia() {
-    if (dados == null) return {};
-
-    final dia = DateTime.now().difference(DateTime(DateTime.now().year)).inDays;
-    final mensagens = extrairMensagens(dados!);
-    final mensagem =
-        mensagens.isEmpty ? 'Deus te fortaleça neste dia.' : mensagens[dia % mensagens.length];
-
-    final livros = (dados!['livros'] as List?) ?? [];
-    if (livros.isEmpty) {
-      return {
-        'versiculo': 'Sem conteúdo bíblico disponível.',
-        'referencia': '',
-        'mensagem': mensagem,
-      };
-    }
-
-    final livro = livros[dia % livros.length] as Map<String, dynamic>;
-    final capitulos = (livro['capitulos'] as List?) ?? [];
-    if (capitulos.isEmpty) {
-      return {
-        'versiculo': 'Sem conteúdo bíblico disponível.',
-        'referencia': '',
-        'mensagem': mensagem,
-      };
-    }
-
-    final cap = capitulos.first as Map<String, dynamic>;
-    final versiculos = (cap['versiculos'] as List?) ?? [];
-    if (versiculos.isEmpty) {
-      return {
-        'versiculo': 'Sem conteúdo bíblico disponível.',
-        'referencia': '',
-        'mensagem': mensagem,
-      };
-    }
-
-    final vers = versiculos.first as Map<String, dynamic>;
-    return {
-      'versiculo': '${vers['texto']}',
-      'referencia': '${livro['nome']} ${cap['numero']}:${vers['numero']}',
-      'mensagem': mensagem,
-    };
+    if (_carregamentoInicial) return {};
+    // Recalcula o livro do dia a partir do relógio (injetável): se a data
+    // mudou com o app aberto, o conteúdo segue o dia atual (caso B4 de QA).
+    final dia = diasDesdeEpoca(_agora);
+    final nomeLivro =
+        _indice.isEmpty ? null : '${_indice[dia % _indice.length]['nome']}';
+    final Map<String, dynamic>? livro =
+        nomeLivro == null ? null : _cacheLivros.cache[nomeLivro];
+    return selecionarVersiculoDoDia(
+      dia: dia,
+      mensagens: _mensagens,
+      livro: livro,
+    );
   }
 
   Widget _montarTelaInicio(Map<String, String> conteudo, String hoje) {
@@ -678,7 +844,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final botaoOuvir = FilledButton.icon(
-                      onPressed: referencia.isEmpty
+                      onPressed: (referencia.isEmpty || !_ttsDisponivel)
                           ? null
                           : () => _falarVersiculo(referencia, versiculo),
                       icon: const Icon(Icons.volume_up),
@@ -691,7 +857,8 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                       onPressed: referencia.isEmpty
                           ? null
                           : () => _toggleFavoritoVersiculo(referencia),
-                      icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
+                      icon:
+                          Icon(isFav ? Icons.favorite : Icons.favorite_border),
                       label: Text(isFav ? 'Salvo' : 'Salvar versículo'),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(52),
@@ -801,14 +968,14 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       physics: const ClampingScrollPhysics(),
       dragStartBehavior: DragStartBehavior.down,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      itemCount: (dados!['livros'] as List?)?.length ?? 0,
+      itemCount: _indice.length,
       itemBuilder: (context, i) {
-        final livro = dados!['livros'][i] as Map<String, dynamic>;
-        final nomeLivro = '${livro['nome']}';
-        final capitulos = (livro['capitulos'] as List?) ?? const [];
+        final nomeLivro = '${_indice[i]['nome']}';
+        final numCapitulos = _indice[i]['capitulos'] ?? 0;
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           child: ExpansionTile(
             key: PageStorageKey<String>('livro_$nomeLivro'),
             maintainState: true,
@@ -823,87 +990,127 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               nomeLivro,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            children: capitulos.whereType<Map>().expand<Widget>((capRaw) {
-              final capitulo = Map<String, dynamic>.from(capRaw);
-              final numeroCapitulo = capitulo['numero'];
-              final chaveCapitulo = _chaveCapitulo(nomeLivro, numeroCapitulo);
-              final capFav = favoritosCapitulos.contains(chaveCapitulo);
-              final versiculos = (capitulo['versiculos'] as List?) ?? [];
-
-              final blocos = <Widget>[
-                Container(
-                  margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Capítulo $numeroCapitulo',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Ouvir capítulo',
-                        onPressed: () => _falarCapitulo(chaveCapitulo),
-                        icon: const Icon(Icons.volume_up_outlined),
-                      ),
-                      IconButton(
-                        tooltip: capFav ? 'Remover capítulo salvo' : 'Salvar capítulo',
-                        onPressed: () => _toggleFavoritoCapitulo(chaveCapitulo),
-                        icon: Icon(capFav ? Icons.bookmark : Icons.bookmark_border),
-                      ),
-                    ],
-                  ),
-                ),
-              ];
-
-              blocos.addAll(versiculos.whereType<Map>().map((vRaw) {
-                final versiculo = Map<String, dynamic>.from(vRaw);
-                final chaveVersiculo =
-                    '$nomeLivro $numeroCapitulo:${versiculo['numero']}';
-                final isFav = favoritosVersiculos.contains(chaveVersiculo);
-                final texto = '${versiculo['texto']}';
-
-                return ListTile(
-                  minVerticalPadding: 10,
-                  title: Text(
-                    chaveVersiculo,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  subtitle: Text(texto),
-                  trailing: Wrap(
-                    spacing: 2,
-                    children: [
-                      IconButton(
-                        tooltip: 'Ouvir versículo',
-                        icon: const Icon(Icons.volume_up),
-                        onPressed: () => _falarVersiculo(chaveVersiculo, texto),
-                      ),
-                      IconButton(
-                        tooltip: isFav ? 'Remover dos salvos' : 'Salvar versículo',
-                        icon: Icon(
-                          isFav ? Icons.favorite : Icons.favorite_border,
-                          color: isFav ? Colors.redAccent : null,
-                        ),
-                        onPressed: () => _toggleFavoritoVersiculo(chaveVersiculo),
-                      ),
-                    ],
-                  ),
-                );
-              }));
-
-              return blocos;
-            }).toList(),
+            subtitle: Text('$numCapitulos capítulos'),
+            // O conteúdo do livro é carregado sob demanda ao expandir, o que
+            // evita baixar toda a Bíblia de uma vez (ótimo para a web).
+            children: <Widget>[
+              FutureBuilder<Map<String, dynamic>?>(
+                future: _assegurarLivro(nomeLivro),
+                builder: (context, snap) {
+                  if (snap.connectionState != ConnectionState.done) {
+                    return const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  final livro = snap.data;
+                  if (livro == null) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('Não foi possível carregar este livro.'),
+                    );
+                  }
+                  final capitulos = comoLista(livro['capitulos']) ?? const [];
+                  return _conteudoLivroWidgets(nomeLivro, capitulos);
+                },
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  /// Constrói os blocos de capítulos e versículos de um livro já carregado.
+  Widget _conteudoLivroWidgets(
+    String nomeLivro,
+    List<dynamic> capitulos,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: capitulos.whereType<Map>().expand<Widget>((capRaw) {
+        final capitulo = Map<String, dynamic>.from(capRaw);
+        final numeroCapitulo = capitulo['numero'];
+        final chaveCapitulo = _chaveCapitulo(nomeLivro, numeroCapitulo);
+        final capFav = favoritosCapitulos.contains(chaveCapitulo);
+        final versiculos = comoLista(capitulo['versiculos']) ?? [];
+
+        final blocos = <Widget>[
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Capítulo $numeroCapitulo',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Ouvir capítulo',
+                  onPressed: _ttsDisponivel
+                      ? () => _falarCapitulo(chaveCapitulo)
+                      : null,
+                  icon: const Icon(Icons.volume_up_outlined),
+                ),
+                IconButton(
+                  tooltip:
+                      capFav ? 'Remover capítulo salvo' : 'Salvar capítulo',
+                  onPressed: () => _toggleFavoritoCapitulo(chaveCapitulo),
+                  icon: Icon(capFav ? Icons.bookmark : Icons.bookmark_border),
+                ),
+              ],
+            ),
+          ),
+        ];
+
+        blocos.addAll(versiculos.whereType<Map>().map((vRaw) {
+          final versiculo = Map<String, dynamic>.from(vRaw);
+          final chaveVersiculo =
+              '$nomeLivro $numeroCapitulo:${versiculo['numero']}';
+          final isFav = favoritosVersiculos.contains(chaveVersiculo);
+          final texto = '${versiculo['texto']}';
+
+          return ListTile(
+            minVerticalPadding: 10,
+            title: Text(
+              chaveVersiculo,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            subtitle: Text(texto),
+            trailing: Wrap(
+              spacing: 2,
+              children: [
+                IconButton(
+                  tooltip: 'Ouvir versículo',
+                  icon: const Icon(Icons.volume_up),
+                  onPressed: _ttsDisponivel
+                      ? () => _falarVersiculo(chaveVersiculo, texto)
+                      : null,
+                ),
+                IconButton(
+                  tooltip: isFav ? 'Remover dos salvos' : 'Salvar versículo',
+                  icon: Icon(
+                    isFav ? Icons.favorite : Icons.favorite_border,
+                    color: isFav ? Colors.redAccent : null,
+                  ),
+                  onPressed: () => _toggleFavoritoVersiculo(chaveVersiculo),
+                ),
+              ],
+            ),
+          );
+        }));
+
+        return blocos;
+      }).toList(),
     );
   }
 
@@ -933,27 +1140,40 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       );
       itens.addAll(
         listaCapitulos.map((chaveCapitulo) {
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              title: Text(chaveCapitulo),
-              leading: const Icon(Icons.bookmark, color: Colors.amber),
-              trailing: Wrap(
-                spacing: 2,
-                children: [
-                  IconButton(
-                    tooltip: 'Ouvir capítulo',
-                    onPressed: () => _falarCapitulo(chaveCapitulo),
-                    icon: const Icon(Icons.volume_up),
+          return FutureBuilder<Map<String, dynamic>?>(
+            future: _assegurarLivroDaChave(chaveCapitulo),
+            builder: (context, snapshot) {
+              final carregado =
+                  snapshot.connectionState == ConnectionState.done &&
+                      _buscarTextoCapitulo(chaveCapitulo) != null;
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  title: Text(chaveCapitulo),
+                  subtitle: snapshot.connectionState == ConnectionState.waiting
+                      ? const Text('Carregando capítulo...')
+                      : null,
+                  leading: const Icon(Icons.bookmark, color: Colors.amber),
+                  trailing: Wrap(
+                    spacing: 2,
+                    children: [
+                      IconButton(
+                        tooltip: 'Ouvir capítulo',
+                        onPressed: (carregado && _ttsDisponivel)
+                            ? () => _falarCapitulo(chaveCapitulo)
+                            : null,
+                        icon: const Icon(Icons.volume_up),
+                      ),
+                      IconButton(
+                        tooltip: 'Remover capítulo salvo',
+                        onPressed: () => _toggleFavoritoCapitulo(chaveCapitulo),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    tooltip: 'Remover capítulo salvo',
-                    onPressed: () => _toggleFavoritoCapitulo(chaveCapitulo),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         }),
       );
@@ -974,31 +1194,41 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       );
       itens.addAll(
         listaVersiculos.map((chaveVersiculo) {
-          final texto = _buscarTextoVersiculo(chaveVersiculo) ?? '';
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              title: Text(chaveVersiculo),
-              subtitle: texto.isEmpty ? null : Text(texto),
-              leading: const Icon(Icons.favorite, color: Colors.redAccent),
-              trailing: Wrap(
-                spacing: 2,
-                children: [
-                  IconButton(
-                    tooltip: 'Ouvir versículo',
-                    onPressed: texto.isEmpty
-                        ? null
-                        : () => _falarVersiculo(chaveVersiculo, texto),
-                    icon: const Icon(Icons.volume_up),
+          return FutureBuilder<Map<String, dynamic>?>(
+            future: _assegurarLivroDaChave(chaveVersiculo),
+            builder: (context, snapshot) {
+              final texto = _buscarTextoVersiculo(chaveVersiculo) ?? '';
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  title: Text(chaveVersiculo),
+                  subtitle: snapshot.connectionState == ConnectionState.waiting
+                      ? const Text('Carregando versículo...')
+                      : texto.isEmpty
+                          ? const Text('Conteúdo não encontrado.')
+                          : Text(texto),
+                  leading: const Icon(Icons.favorite, color: Colors.redAccent),
+                  trailing: Wrap(
+                    spacing: 2,
+                    children: [
+                      IconButton(
+                        tooltip: 'Ouvir versículo',
+                        onPressed: (texto.isEmpty || !_ttsDisponivel)
+                            ? null
+                            : () => _falarVersiculo(chaveVersiculo, texto),
+                        icon: const Icon(Icons.volume_up),
+                      ),
+                      IconButton(
+                        tooltip: 'Remover versículo salvo',
+                        onPressed: () =>
+                            _toggleFavoritoVersiculo(chaveVersiculo),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    tooltip: 'Remover versículo salvo',
-                    onPressed: () => _toggleFavoritoVersiculo(chaveVersiculo),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         }),
       );
@@ -1013,25 +1243,134 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     );
   }
 
-  /// LINK DE DOACAO (Etapa 3):
-  /// Troque este endereco pelo seu link de doacao real (Pix, PayPal,
-  /// Buy Me a Coffee etc.). Nao use "exemplo.com" em producao.
-  static const String _urlDoacao =
-      'https://www.buymeacoffee.com/exemplo';
+  Future<void> _copiarChavePix() async {
+    // A permissão de clipboard pode ser negada (web/desktop): falha de forma
+    // graciosa, orientando o usuário a copiar manualmente (caso B2 de QA).
+    var copiou = false;
+    try {
+      await Clipboard.setData(const ClipboardData(text: chavePix));
+      copiou = true;
+    } catch (_) {
+      copiou = false;
+    }
+    if (!mounted) return;
 
-  Future<void> _abrirLinkDoacao() async {
-    final uri = Uri.parse(_urlDoacao);
-    final abriu = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!abriu && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nao foi possivel abrir o link de doacao.'),
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            copiou
+                ? 'Chave Pix copiada com sucesso!'
+                : 'Não foi possível copiar. Copie manualmente: $chavePix',
+          ),
+          duration: const Duration(seconds: 3),
         ),
       );
+    if (copiou) {
+      await _mostrarComoDoar(chaveJaCopiada: true);
     }
+  }
+
+  Future<void> _mostrarComoDoar({bool chaveJaCopiada = false}) async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: Icon(
+          Icons.pix,
+          size: 44,
+          color: Theme.of(dialogContext).colorScheme.primary,
+        ),
+        title: Text(
+          chaveJaCopiada ? 'Chave Pix copiada!' : 'Como fazer a doação',
+          textAlign: TextAlign.center,
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (chaveJaCopiada)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'Agora siga estes passos no Nubank ou no aplicativo do seu banco:',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(child: Text('1')),
+                title: Text('Abra o aplicativo do seu banco.'),
+              ),
+              const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(child: Text('2')),
+                title: Text('Toque em “Pix” e depois em “Transferir”.'),
+              ),
+              const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(child: Text('3')),
+                title:
+                    Text('Cole a chave, escolha o valor e confira os dados.'),
+              ),
+              const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(child: Text('4')),
+                title:
+                    Text('Confirme a doação somente se estiver tudo correto.'),
+              ),
+              if (!chaveJaCopiada) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      var copiou = false;
+                      try {
+                        await Clipboard.setData(
+                          const ClipboardData(text: chavePix),
+                        );
+                        copiou = true;
+                      } catch (_) {
+                        copiou = false;
+                      }
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      }
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              copiou
+                                  ? 'Chave Pix copiada com sucesso!'
+                                  : 'Não foi possível copiar. Copie manualmente: $chavePix',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.copy_rounded),
+                    label: const Text('Copiar chave Pix'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(56),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Entendi'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _montarTelaAjustes() {
@@ -1067,17 +1406,20 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           title: Text(
             _leituraAtiva
                 ? (_pausado ? 'Leitura pausada' : 'Leitura em andamento')
-                : 'Leitura em voz alta',
+                : _ttsDisponivel
+                    ? 'Leitura em voz alta'
+                    : 'Leitura em voz alta (indisponível)',
           ),
-          subtitle: const Text(
-            'Leitura manual, não-continuada. O som para ao final de cada trecho.',
+          subtitle: Text(
+            _ttsDisponivel
+                ? 'Leitura manual, não-continuada. O som para ao final de cada trecho.'
+                : 'Não está disponível nesta plataforma/dispositivo.',
           ),
-          trailing: _leituraAtiva
-              ? _botaoPlayPause(compacto: true)
-              : null,
+          trailing: _leituraAtiva ? _botaoPlayPause(compacto: true) : null,
         ),
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -1117,7 +1459,11 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                     onChanged: _selecionarVozPorId,
                   )
                 else
-                  const Text('Nenhuma voz pt disponível no dispositivo.'),
+                  Text(
+                    _ttsDisponivel
+                        ? 'Nenhuma voz pt disponível no dispositivo.'
+                        : 'Leitura em voz alta não disponível aqui.',
+                  ),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
@@ -1153,42 +1499,95 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
             borderRadius: BorderRadius.circular(16),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
                   children: [
                     Icon(
                       Icons.favorite_rounded,
+                      size: 30,
                       color: Theme.of(context).colorScheme.primary,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     const Expanded(
                       child: Text(
-                        'Apoiar o projeto',
+                        'Apoiar o projeto via Pix',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                          fontSize: 18,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Este aplicativo é gratuito e não contém rastreadores. '
-                  'Se ele te ajudou, considere apoiar para mantê-lo no ar.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _abrirLinkDoacao,
-                    icon: const Icon(Icons.card_giftcard),
-                    label: const Text('Fazer uma doação'),
+                Text(
+                  'Sua contribuição é voluntária e ajuda a manter este '
+                  'aplicativo gratuito. A doação será recebida em uma conta Nubank.',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        height: 1.4,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                Semantics(
+                  label: 'Chave Pix por e-mail: $chavePix',
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'CHAVE PIX — E-MAIL',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        SizedBox(height: 6),
+                        SelectableText(
+                          chavePix,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: _copiarChavePix,
+                  icon: const Icon(Icons.copy_rounded, size: 26),
+                  label: const Text('Copiar chave Pix'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(58),
+                    textStyle: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _mostrarComoDoar,
+                  icon: const Icon(Icons.help_outline_rounded),
+                  label: const Text('Ver como fazer a doação'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Antes de confirmar, confira no banco o nome de quem receberá.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
@@ -1213,12 +1612,24 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
   @override
   Widget build(BuildContext context) {
-    if (dados == null) {
+    if (_carregamentoInicial) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    // Garante que o livro do dia atual esteja carregado mesmo após a virada
+    // de data com o app aberto (caso B4 de QA); dispara rebuild ao concluir.
+    final nomeLivroAtual = _indice.isEmpty
+        ? null
+        : '${_indice[diasDesdeEpoca(_agora) % _indice.length]['nome']}';
+    if (nomeLivroAtual != null && !_cacheLivros.contem(nomeLivroAtual)) {
+      _cacheLivros.assegurar(nomeLivroAtual).then((_) {
+        if (mounted) setState(() {});
+      });
+    }
+
     final conteudo = _conteudoDoDia();
-    final hoje = DateFormat("EEEE, d 'de' MMMM", 'pt_BR').format(DateTime.now());
+    final hoje =
+        DateFormat("EEEE, d 'de' MMMM", 'pt_BR').format(_agora);
 
     final telas = [
       _montarTelaInicio(conteudo, hoje),
@@ -1274,13 +1685,4 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       ),
     );
   }
-}
-
-List<String> extrairMensagens(Map<String, dynamic> dados) {
-  final mensagens =
-      (dados['mensagens'] as List?) ?? (dados['mensagens_dia'] as List?) ?? [];
-  return mensagens
-      .map((m) => '$m')
-      .where((m) => m.trim().isNotEmpty)
-      .toList();
 }
