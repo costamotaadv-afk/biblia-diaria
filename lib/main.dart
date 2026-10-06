@@ -199,6 +199,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   final Set<String> _livrosComErro = {};
   String? _tipoFiltroEstudos;
   String _livroFiltroEstudos = '';
+  String _buscaEstudos = '';
   final FlutterTts _tts = FlutterTts();
   bool _falando = false;
   bool _pausado = false;
@@ -1372,14 +1373,28 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
     final tipos = tiposDisponiveis(_indiceEstudos);
     final livros = livrosDisponiveis(_indiceEstudos);
-    final filtrados = filtrarRecursos(
-      _indiceEstudos,
-      tipo: _tipoFiltroEstudos,
-      livro: _livroFiltroEstudos.isEmpty ? null : _livroFiltroEstudos,
+    final filtrados = filtrarPorBusca(
+      filtrarRecursos(
+        _indiceEstudos,
+        tipo: _tipoFiltroEstudos,
+        livro: _livroFiltroEstudos.isEmpty ? null : _livroFiltroEstudos,
+      ),
+      _buscaEstudos,
     );
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: TextField(
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Buscar nos estudos',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (valor) => setState(() => _buscaEstudos = valor),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
           child: SingleChildScrollView(

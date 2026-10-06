@@ -167,4 +167,52 @@ void main() {
       expect(livrosDisponiveis(recursos), ['João', 'Salmos']);
     });
   });
+
+  group('busca por palavra-chave (EST7)', () {
+    final recursos = recursosDeJson([
+      {
+        'id': '1',
+        'tipo': 'nota',
+        'titulo': 'Criação',
+        'corpo': 'No princípio, Deus criou os céus e a terra.',
+        'temas': ['origem', 'mundo'],
+      },
+      {
+        'id': '2',
+        'tipo': 'artigo',
+        'titulo': 'Salvação',
+        'corpo': 'Pela graça sois salvos, por meio da fé.',
+        'temas': ['graça', 'fé'],
+      },
+      {
+        'id': '3',
+        'tipo': 'sermao',
+        'titulo': 'Amor',
+        'corpo': 'Deus é amor.',
+        'temas': ['amor'],
+      },
+    ]);
+
+    test('busca por título', () {
+      expect(filtrarPorBusca(recursos, 'criação').single.id, '1');
+    });
+
+    test('busca ignora acentos e maiúsculas', () {
+      expect(filtrarPorBusca(recursos, 'GRACA').single.id, '2');
+      expect(filtrarPorBusca(recursos, 'fé').single.id, '2');
+    });
+
+    test('busca por tema', () {
+      expect(filtrarPorBusca(recursos, 'amor').single.id, '3');
+    });
+
+    test('busca vazia devolve todos', () {
+      expect(filtrarPorBusca(recursos, ''), hasLength(3));
+      expect(filtrarPorBusca(recursos, '   '), hasLength(3));
+    });
+
+    test('busca sem resultado devolve vazio', () {
+      expect(filtrarPorBusca(recursos, 'inexistente'), isEmpty);
+    });
+  });
 }

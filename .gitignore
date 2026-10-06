@@ -49,3 +49,8 @@ app.*.map.json
 nomes.txt
 Untitled-1.txt
 
+# Assinatura Android (nunca commitar chaves)
+android/key.properties
+*.jks
+*.keystore
+

@@ -118,3 +118,13 @@ módulo puro; a suíte existente deve permanecer verde.
   `mounted`, escritas serializadas.
 - Nenhuma dependência nova.
 - Rodar a suíte ao fim de cada fase afetada.
+
+---
+
+## Evolução pós-MVP — US4: Busca por palavra-chave (Priority: P2)
+
+- [x] T017 [US4] Adicionar `filtrarPorBusca` em `lib/catalogo_estudos.dart`
+      (busca sem diferenciar caixa e ignorando acentos, casando em título, corpo
+      e temas) + campo de busca na aba "Estudos" (`lib/main.dart`) + caso **EST7**
+      na matriz e testes em `test/catalogo_estudos_test.dart`.
+

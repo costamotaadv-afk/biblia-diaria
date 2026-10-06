@@ -310,3 +310,36 @@ List<String> livrosDisponiveis(Iterable<RecursoEstudo> todos) {
   }
   return livros.toList()..sort();
 }
+
+/// Filtra [todos] por palavra-chave [busca], casando (sem diferenciar
+/// maiúsculas/minúsculas e ignorando acentos) contra título, corpo e temas.
+/// Busca vazia ou só espaços → devolve todos (sem filtro). Caso EST7.
+List<RecursoEstudo> filtrarPorBusca(
+  Iterable<RecursoEstudo> todos,
+  String busca,
+) {
+  final termo = _normalizarBusca(busca);
+  if (termo.isEmpty) return todos.toList(growable: false);
+
+  final encontrados = <RecursoEstudo>[];
+  for (final recurso in todos) {
+    final alvo = _normalizarBusca(
+      '${recurso.titulo} ${recurso.corpo} ${recurso.temas.join(' ')}',
+    );
+    if (alvo.contains(termo)) encontrados.add(recurso);
+  }
+  return encontrados;
+}
+
+/// Normaliza para busca: minúsculas e sem acentos (busca tolerante).
+String _normalizarBusca(String texto) {
+  return texto
+      .toLowerCase()
+      .replaceAll(RegExp('[áàâãä]'), 'a')
+      .replaceAll(RegExp('[éèêë]'), 'e')
+      .replaceAll(RegExp('[íìîï]'), 'i')
+      .replaceAll(RegExp('[óòôõö]'), 'o')
+      .replaceAll(RegExp('[úùûü]'), 'u')
+      .replaceAll(RegExp('ç'), 'c')
+      .trim();
+}

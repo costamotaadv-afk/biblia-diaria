@@ -62,6 +62,27 @@ Carregamento sob demanda com retry.
   `Future<Map<String,dynamic>?> assegurar(nome)`. Falha transiente remove o
   future (retry); chamadas concorrentes deduplicadas. C5.
 
+## `lib/catalogo_estudos.dart` (feature 002)
+
+Lógica pura dos recursos de estudo (sem I/O nem Flutter).
+
+- `class RecursoEstudo` — `id`, `tipo`, `titulo`, `corpo`, `referencia`, `livro`,
+  `temas`, `fonte`; getters `temCorpo`, `temFonte`.
+- `class FonteEstudo` — `autor`, `obra`, `ano`, `licenca`; getters `vazio`,
+  `credito` (monta a atribuição legível).
+- `List<RecursoEstudo> recursosDeJson(dynamic)` — parsing defensivo (EST1/EST2).
+- `bool recursoAplicavel(RecursoEstudo, String referencia, {String? livro})` —
+  casa referência igual, capítulo ou livro (EST3).
+- `String? capituloDaReferencia(String)` — `"João 3:16"` → `"João 3"`.
+- `List<RecursoEstudo> recursosAplicaveis(...)`, `filtrarRecursos(...)`,
+  `tiposDisponiveis(...)`, `livrosDisponiveis(...)`, `agruparPorTipo(...)`,
+  `rotuloTipo(...)` — filtros/agrupamento determinísticos (EST5/EST6).
+
+## `lib/cache_estudos.dart` (feature 002)
+
+- `class CacheDeEstudos` — espelha `CacheDeLivros` (deduplicação + retry),
+  com `carregador` injetável e `assegurar(livro)`.
+
 ## `lib/platform_support.dart`
 
 Gates de capacidade por plataforma (voz/anúncios). Ver `platform.md`.
@@ -72,7 +93,7 @@ Gates de capacidade por plataforma (voz/anúncios). Ver `platform.md`.
 
 ## Widgets — `lib/widgets/`
 
-Contrato de componente reutilizável (único hoje):
+Contrato de componentes reutilizáveis:
 
 - `class BannerAnuncio extends StatefulWidget`
   Exibe banner adaptativo quando `suportaAdMob`; sem parâmetros obrigatórios
@@ -81,6 +102,12 @@ Contrato de componente reutilizável (único hoje):
   `dispose`; falha de `load()` e `MissingPluginException` tratadas
   internamente (C9/C10); ID de teste bloqueado em release via
   `erroIdAnuncioEmProducao` (B8).
+- `class PainelEstudos extends StatelessWidget` (feature 002)
+  Painel reutilizável de recursos de estudo (`lib/widgets/painel_estudos.dart`),
+  usado no bottom sheet da leitura e na biblioteca. Recebe os recursos
+  (`RecursoEstudo`) e um `onSalvar`; sem regra de negócio embutida (a lógica
+  vive em `lib/catalogo_estudos.dart`).
 
 Regra de extração de widget: dois usos reais **ou** responsabilidade isolada
-(ex.: banner). Qualquer widget novo deve declarar sua API pública aqui.
+(ex.: banner, painel de estudos). Qualquer widget novo deve declarar sua API
+pública aqui.

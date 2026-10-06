@@ -288,6 +288,14 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 - **Impacto se falhar:** a ordem da biblioteca mudaria a cada build → UX inconsistente e testes frágeis (NFR-007).
 - **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
 
+**EST7. Busca por palavra-chave nos estudos**
+- **Input:** termo de busca na biblioteca de estudos (título, corpo ou tema).
+- **Esperado:** `filtrarPorBusca` casa sem diferenciar maiúsculas/minúsculas e
+  ignora acentos; busca vazia devolve todos; sem resultado → estado vazio claro.
+- **Impacto se falhar:** o usuário não acharia um recurso por palavra-chave, ou
+  a busca seria frágil (diferenciação de acento/caixa) — UX ruim na biblioteca.
+- **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
+
 **EST6. Rótulo genérico para tipo desconhecido**
 - **Input:** `tipo: "devocional"` (fora de `tiposConhecidos`) ou `""`.
 - **Esperado:** `rotuloTipo` capitaliza o desconhecido (`"Devocional"`) e usa `"Estudo"` para vazio; tipos conhecidos têm rótulo fixo (`"Sermão"`, `"Momento histórico"`).
