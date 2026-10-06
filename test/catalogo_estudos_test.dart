@@ -44,12 +44,16 @@ void main() {
 
   group('corpo e fonte (EST4)', () {
     test('EST4: corpo vazio ou só espaços → sem conteúdo', () {
-      final vazio = recursosDeJson([{'id': 'a', 'corpo': '   '}]).single;
+      final vazio = recursosDeJson([
+        {'id': 'a', 'corpo': '   '}
+      ]).single;
       expect(vazio.temCorpo, isFalse);
     });
 
     test('corpo preenchido → tem conteúdo', () {
-      final cheio = recursosDeJson([{'id': 'a', 'corpo': 'Olá'}]).single;
+      final cheio = recursosDeJson([
+        {'id': 'a', 'corpo': 'Olá'}
+      ]).single;
       expect(cheio.temCorpo, isTrue);
     });
 
@@ -63,7 +67,9 @@ void main() {
       expect(comFonte.temFonte, isTrue);
       expect(comFonte.fonte!.credito, 'Autor, Obra (2026)');
 
-      final semFonte = recursosDeJson([{'id': 'b'}]).single;
+      final semFonte = recursosDeJson([
+        {'id': 'b'}
+      ]).single;
       expect(semFonte.temFonte, isFalse);
     });
   });
@@ -126,14 +132,16 @@ void main() {
   });
 
   group('tipos, agrupamento e filtros (EST5/EST6)', () {
-    test('EST6: tipo conhecido tem rótulo fixo; desconhecido é capitalizado', () {
+    test('EST6: tipo conhecido tem rótulo fixo; desconhecido é capitalizado',
+        () {
       expect(rotuloTipo('sermao'), 'Sermão');
       expect(rotuloTipo('momento_historico'), 'Momento histórico');
       expect(rotuloTipo('devocional'), 'Devocional');
       expect(rotuloTipo(''), 'Estudo');
     });
 
-    test('EST5: agrupamento põe tipos conhecidos primeiro, de forma estável', () {
+    test('EST5: agrupamento põe tipos conhecidos primeiro, de forma estável',
+        () {
       final recursos = recursosDeJson([
         {'id': '1', 'tipo': 'devocional'},
         {'id': '2', 'tipo': 'artigo'},

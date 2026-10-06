@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:biblia_diaria/main.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -17,9 +19,9 @@ Future<void> aguardarWidget(WidgetTester tester, Finder finder) async {
   fail('Widget esperado não apareceu: $finder');
 }
 
-/// Caso C8 da matriz de QA: mudar o tamanho/orientação com o banner em ação
-/// não pode lançar exceção; o `didChangeDependencies` descarta o banner antigo
-/// e recarrega um novo (sem vazamento), mantendo o app navegável.
+/// Caso C9 (variante timeout) da matriz de QA: `banner.load()` que nunca
+/// completa não pode travar o app nem gerar exceção assíncrona — o carregamento
+/// é fire-and-forget e o app segue navegável.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -36,33 +38,34 @@ void main() {
     );
   });
 
-  testWidgets('C8: rotação com banner em ação não quebra', (tester) async {
-    // Simula Android (suportaAdMob) para o banner entrar em ação.
+  testWidgets('C9: load do banner que nunca completa não trava o app',
+      (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final nuncaCompleta = Completer<Object?>();
     try {
       const ads = MethodChannel('plugins.flutter.io/google_mobile_ads');
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(ads, (call) async {
+          .setMockMethodCallHandler(ads, (call) {
         switch (call.method) {
           case '_init':
-            return null;
+            return Future<Object?>.value();
           case 'AdSize#getAnchoredAdaptiveBannerAdSize':
-            return 50; // altura em px retornada pelo plugin
+            return Future<Object?>.value(50);
           case 'loadBannerAd':
-            return null;
+            return nuncaCompleta.future; // pendente para sempre
           default:
-            return null;
+            return Future<Object?>.value();
         }
       });
 
       await tester.pumpWidget(const BibliaApp());
       await aguardarWidget(tester, find.text('Bíblia Diária'));
 
-      // Rotação: muda a largura → didChangeDependencies recarrega o banner.
-      await tester.binding.setSurfaceSize(const Size(600, 800));
-      await tester.pumpAndSettle();
-      await tester.binding.setSurfaceSize(const Size(800, 600));
-      await tester.pumpAndSettle();
+      // O app segue navegável mesmo com o load do banner pendente.
+      await tester.tap(find.text('Bíblia').last);
+      await tester.pump();
+      await tester.tap(find.text('Início').last);
+      await tester.pump();
 
       expect(tester.takeException(), isNull);
       expect(find.text('Bíblia Diária'), findsOneWidget);
@@ -71,6 +74,7 @@ void main() {
       await tester.pump();
     } finally {
       debugDefaultTargetPlatformOverride = null;
+      if (!nuncaCompleta.isCompleted) nuncaCompleta.complete();
     }
   });
 }

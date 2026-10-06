@@ -130,8 +130,7 @@ void main() {
 
   group('E11 — referência cruzada malformada (4 dígitos)', () {
     test('Salmos 1190:12 não casa e não lança', () {
-      final resultado =
-          textoParaLeituraNatural('Veja Salmos 1190:12, amigo.');
+      final resultado = textoParaLeituraNatural('Veja Salmos 1190:12, amigo.');
       expect(resultado, isNotEmpty);
       // 4 dígitos excedem \d{1,3}: a referência fica literal (sem virar horário
       // nem crash) — decisão documentada na matriz (E11).

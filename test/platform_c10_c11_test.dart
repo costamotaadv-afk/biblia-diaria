@@ -71,7 +71,8 @@ void main() {
   });
 
   group('C11 — TTS indisponível degrada sem travar o app', () {
-    testWidgets('app abre, botão "Ouvir versículo" fica desabilitado '
+    testWidgets(
+        'app abre, botão "Ouvir versículo" fica desabilitado '
         'e Ajustes avisa a indisponibilidade', (tester) async {
       // Simula plataforma SEM plugin TTS: toda chamada lança erro.
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

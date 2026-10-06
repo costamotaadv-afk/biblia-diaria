@@ -116,11 +116,11 @@ user story.
       `lib/dados_seguros.dart` e delegados em `_buscarTextoVersiculo`/
       `_buscarTextoCapitulo` de `lib/main.dart` (sem cast direto `as Map`;
       ausência → null → UI mostra "Conteúdo não encontrado.").
-- [ ] T008 [US2] Substituir os casts diretos restantes de dados externos em
+- [x] T008 [US2] Substituir os casts diretos restantes de dados externos em
       `lib/main.dart` pelo guardião `comoLista` (ex.: parsing do `indice.json`
       com `as List`) — constituição II, consistente com `dados_seguros.dart`;
       manter testes E1–E9 verdes.
-- [ ] T009 [US8] Varredura de constituição I: confirmar que nenhuma regra de
+- [x] T009 [US8] Varredura de constituição I: confirmar que nenhuma regra de
       negócio/parsing vive dentro de widget (`lib/widgets/` e trechos de
       `lib/main.dart`); extrair para `lib/` qualquer regra testável que ainda
       esteja na árvore de UI.
@@ -202,7 +202,7 @@ capítulos em sequência sem rede.
 
 **Independent Test**: salvar/remover com reinício simulado e 200+ itens.
 
-- [ ] T016 [P] [US3] Estender `test/concurrency_c4_test.dart` (C4): duplo-toque
+- [x] T016 [P] [US3] Estender `test/concurrency_c4_test.dart` (C4): duplo-toque
       em "salvar capítulo" e alternância rápida versículo↔capítulo — fila
       serializada last-write-wins por chave; estado final em disco igual ao da
       memória após reinício simulado.
@@ -212,7 +212,7 @@ capítulos em sequência sem rede.
 - [x] T018 [P] [US3] Caso **C7**: teste de troca de aba durante carregamento —
       mock de carregamento lento (`rootBundle` sem completar) + navegação
       Bíblia→Salvos antes do `FutureBuilder` resolver; assert de ausência de
-- [ ] T019 [US3] Confirmar E14 (favorito órfão → `"Conteúdo não encontrado."`)
+- [x] T019 [US3] Confirmar E14 (favorito órfão → `"Conteúdo não encontrado."`)
       e B11 (prefixos numéricos/"1 João 3") com cobertura em `test/widget_test.dart`
       ou `test/limites_dados_test.dart`; preencher lacunas se houver.
 
@@ -247,12 +247,12 @@ plataforma sem TTS mostra botões desabilitados.
       encerre o trecho com aviso e volte ao estado ocioso — sem derrubar
       `_ttsDisponivel` para a sessão inteira (rever nota de `contracts/platform.md`);
       atualizar matriz C12 → Coberto.
-- [ ] T023 [US4] Revisar a máquina de estados `_falando/_pausado/_leituraAtiva`
+- [x] T023 [US4] Revisar a máquina de estados `_falando/_pausado/_leituraAtiva`
       e os handlers (start/completion/cancel/pause/continue) em `lib/main.dart`
       para C1/C3: um único áudio e `stop` antes de novo trecho; estender
       `test/tts_concorrencia_test.dart` para "iniciar capítulo durante versículo"
       se a cobertura atual não exercitar C3.
-- [ ] T024 [US4] Estender `test/tts_qualidade_test.dart` (B6/B7): seleção manual
+- [x] T024 [US4] Estender `test/tts_qualidade_test.dart` (B6/B7): seleção manual
       por gênero (masculina/feminina), reescrita de `voz_tts_id` quando a voz
       salva é removida e persistência da escolha.
 
@@ -268,10 +268,10 @@ plataformas suportadas.
 **Independent Test**: alternar tema/fonte, reiniciar e percorrer as abas em tela
 estreita com fonte grande.
 
-- [ ] T025 [P] [US5] Revisar em `test/widget_test.dart` a persistência de
+- [x] T025 [P] [US5] Revisar em `test/widget_test.dart` a persistência de
       `tema_escuro`/`fonte_grande` com reinício simulado (aplicar → reiniciar →
       conferir valor lido) — FR-011.
-- [ ] T026 [P] [US5] Estender `test/overflow_b12_test.dart` (B12) para grade de
+- [x] T026 [P] [US5] Estender `test/overflow_b12_test.dart` (B12) para grade de
       telas 320/360/411 px × escalas 1.0, 1.18 e 2.0 nas 4 abas com texto longo
       (Salmos 119:176); sem overflow nem texto cortado (SC-006).
 
@@ -291,11 +291,11 @@ de verificação do recebedor.
       (novo arquivo ou `test/widget_test.dart`) garantindo que a aba Ajustes
       exibe o aviso "confira no banco o nome de quem receberá" e que o rótulo
       Semantics da chave Pix está presente; atualizar matriz B10 → Coberto.
-- [ ] T028 [P] [US6] Estender `test/clipboard_b2_test.dart` (B2): falha e sucesso
+- [x] T028 [P] [US6] Estender `test/clipboard_b2_test.dart` (B2): falha e sucesso
       da cópia também a partir do diálogo "Ver como fazer a doação" (segundo
       ponto de `Clipboard.setData` em `_mostrarComoDoar`), com feedback correto
       em cada caminho.
-- [ ] T029 [US6] Confirmar cobertura de B3 (`chavePix`/`chavePixValida` em
+- [x] T029 [US6] Confirmar cobertura de B3 (`chavePix`/`chavePixValida` em
       `test/config_negocio_test.dart`) e C13 (duplo-toque em copiar em
       `test/tts_concorrencia_test.dart`).
 
@@ -316,9 +316,9 @@ sem anúncios e sem erro.
       com dispose do anterior e estado de TTS preservado; corrigir
       `lib/widgets/banner_anuncio.dart`/`lib/main.dart` se houver vazamento;
       atualizar matriz C8 → Coberto.
-- [ ] T031 [P] [US7] Estender `test/banner_c9_test.dart` (C9): `load()` do banner
+- [x] T031 [P] [US7] Estender `test/banner_c9_test.dart` (C9): `load()` do banner
       que nunca completa (timeout) — sem estado preso nem exceção assíncrona.
-- [ ] T032 [US7] Confirmar C10 (`inicializarAdMob` sem GMS → nunca lança) em
+- [x] T032 [US7] Confirmar C10 (`inicializarAdMob` sem GMS → nunca lança) em
       `test/platform_c10_c11_test.dart` e B8 (ID de teste bloqueado em release)
       em `test/config_negocio_test.dart`.
 
@@ -331,17 +331,17 @@ sem anúncios e sem erro.
 **Purpose**: fechar o ciclo — documentação, matriz, contratos e release
 readiness.
 
-- [ ] T033 [P] [US8] Executar o roteiro completo do `quickstart.md` (validação
+- [x] T033 [P] [US8] Executar o roteiro completo do `quickstart.md` (validação
       manual + suíte automatizada) após os refinamentos das fases anteriores;
       registrar resultado por FR-001…FR-016 e divergências.
-- [ ] T034 [US8] Atualizar `tool/QA_EDGE_CASES.md`: status de C6, C7, C8, C12,
+- [x] T034 [US8] Atualizar `tool/QA_EDGE_CASES.md`: status de C6, C7, C8, C12,
       E11, E12, B10 → Coberto, inclusão do caso E16 e atualização do resumo de
       prioridade e da lista de cobertura automatizada.
-- [ ] T035 [P] [US8] Atualizar `contracts/module-apis.md`, `contracts/storage.md`,
+- [x] T035 [P] [US8] Atualizar `contracts/module-apis.md`, `contracts/storage.md`,
       `contracts/platform.md` e `data-model.md` com as mudanças de assinatura,
       chave ou estado introduzidas (ex.: `dividirTextoParaFala`, comportamento de
       retomada do TTS, caso E16 na resolução de favoritos).
-- [ ] T036 [P] [US8] Rodada final de qualidade: `flutter analyze` e `flutter
+- [x] T036 [P] [US8] Rodada final de qualidade: `flutter analyze` e `flutter
       test` 100% verdes; conferir que todos os casos marcados como Coberto na
       matriz passam (SC-007).
 - [ ] T037 [US8] (Bloqueado externamente — conta AdMob) Trocar IDs de anúncio de
@@ -351,7 +351,7 @@ readiness.
 - [ ] T038 [P] [US8] (Bloqueado por ambiente — Android SDK não instalado) Gerar
       `flutter build appbundle` e conferir que nenhum ID de teste está no
       artefato final.
-- [ ] T039 [P] [US8] Limpeza final: remover código morto/docstrings duplicados
+- [x] T039 [P] [US8] Limpeza final: remover código morto/docstrings duplicados
       (ex.: comentários repetidos em `lib/main.dart`), garantir pt-BR e rodar
       `dart format`; commit por tarefa ou grupo lógico.
 

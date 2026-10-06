@@ -255,7 +255,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     List<Map<String, dynamic>> indice = [];
     try {
       final indiceJson = await rootBundle.loadString('assets/data/indice.json');
-      indice = (json.decode(indiceJson) as List)
+      indice = (comoLista(json.decode(indiceJson)) ?? const <dynamic>[])
           .whereType<Map>()
           .map((m) => Map<String, dynamic>.from(m))
           .toList();
@@ -314,7 +314,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     try {
       final jsonStr =
           await rootBundle.loadString('assets/data/livros/$nomeLivro.json');
-      return json.decode(jsonStr) as Map<String, dynamic>;
+      final decodificado = json.decode(jsonStr);
+      if (decodificado is! Map) return null;
+      return Map<String, dynamic>.from(decodificado);
     } catch (_) {
       return null;
     }
@@ -413,10 +415,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                       Text(
                         titulo,
                         textAlign: TextAlign.center,
-                        style:
-                            Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 8),
                       PainelEstudos(
@@ -1298,9 +1299,8 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
             ),
           IconButton(
             tooltip: 'Ouvir capítulo',
-            onPressed: _ttsDisponivel
-                ? () => _falarCapitulo(chaveCapitulo)
-                : null,
+            onPressed:
+                _ttsDisponivel ? () => _falarCapitulo(chaveCapitulo) : null,
             icon: const Icon(Icons.volume_up_outlined),
           ),
           IconButton(
@@ -2065,8 +2065,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     }
 
     final conteudo = _conteudoDoDia();
-    final hoje =
-        DateFormat("EEEE, d 'de' MMMM", 'pt_BR').format(_agora);
+    final hoje = DateFormat("EEEE, d 'de' MMMM", 'pt_BR').format(_agora);
 
     final telas = [
       _montarTelaInicio(conteudo, hoje),

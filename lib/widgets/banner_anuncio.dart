@@ -40,7 +40,9 @@ class _BannerAnuncioState extends State<BannerAnuncio> {
     // produção (viola política do AdMob e zera a receita). O assert falha em
     // debug; a função pura também é coberta por teste unitário.
     final erro = erroIdAnuncioEmProducao(isRelease: kReleaseMode, id: id);
-    assert(erro == null, 'ID de anúncio de TESTE do Google em release: '
+    assert(
+        erro == null,
+        'ID de anúncio de TESTE do Google em release: '
         'troque pelo ID real antes de publicar.');
     return id;
   }

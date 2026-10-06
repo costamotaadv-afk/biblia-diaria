@@ -114,5 +114,31 @@ void main() {
       find.textContaining('Abra o aplicativo do seu banco'),
       findsOneWidget,
     );
+
+    // Fecha o diálogo de sucesso antes da fase 3.
+    await tester.tap(find.text('Entendi'));
+    await tester.pumpAndSettle();
+
+    // ── Fase 3: cópia a partir do diálogo "Ver como fazer a doação" (T028) ────
+    await tester.scrollUntilVisible(
+      find.text('Ver como fazer a doação'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Ver como fazer a doação'));
+    await tester.pumpAndSettle();
+    expect(find.text('Como fazer a doação'), findsOneWidget);
+
+    final botaoCopiarDialogo = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.text('Copiar chave Pix'),
+    );
+    await tester.tap(botaoCopiarDialogo);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Fecha o diálogo e mostra o feedback de sucesso (mesmo caminho de B2).
+    expect(find.text('Chave Pix copiada com sucesso!'), findsOneWidget);
   });
 }

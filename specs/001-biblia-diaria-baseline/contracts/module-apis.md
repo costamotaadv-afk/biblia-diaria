@@ -50,6 +50,9 @@ Conversões para leitura em voz alta (funções puras).
   (0–999; fora → dígito cru).
 - `String textoParaLeituraNatural(String texto)` — normaliza pontuação e
   referências cruzadas para o TTS.
+- `List<String> dividirTextoParaFala(String texto, {int maxCaracteres = 1500})`
+  — divide texto longo em segmentos (corta na última pontuação, sem quebrar
+  palavra) para capítulos gigantes (E12).
 
 ## `lib/cache_livros.dart`
 

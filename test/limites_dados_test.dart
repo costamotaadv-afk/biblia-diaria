@@ -72,7 +72,10 @@ void main() {
       final r = selecionarVersiculoDoDia(
         dia: 0,
         mensagens: [],
-        livro: <String, dynamic>{'nome': 'Gênesis', 'capitulos': {'errado': true}},
+        livro: <String, dynamic>{
+          'nome': 'Gênesis',
+          'capitulos': {'errado': true}
+        },
       );
       expect(r['versiculo'], 'Sem conteúdo bíblico disponível.');
     });
@@ -107,7 +110,10 @@ void main() {
         livro: <String, dynamic>{
           'nome': 'Gênesis',
           'capitulos': [
-            {'numero': 1, 'versiculos': [1, 2, 3]},
+            {
+              'numero': 1,
+              'versiculos': [1, 2, 3]
+            },
           ],
         },
       );
@@ -137,7 +143,8 @@ void main() {
       expect(r['referencia'], '');
     });
 
-    test('T012/E4: capítulo sorteado com versículos vazios → fallback e '
+    test(
+        'T012/E4: capítulo sorteado com versículos vazios → fallback e '
         'referência vazia (botões desabilitados na Home)', () {
       // dia 66 sorteia capitulos[1] (capítulo 2), cujo versiculos é vazio.
       final r = selecionarVersiculoDoDia(
@@ -163,29 +170,31 @@ void main() {
       expect(r['mensagem'], isNotEmpty);
     });
 
-    test('B5: ciclo determinístico (livro retorna a cada 66 dias; versículo a cada 132)', () {
+    test(
+        'B5: ciclo determinístico (livro retorna a cada 66 dias; versículo a cada 132)',
+        () {
       // dia 0: cap (0~/66)%2=0, vers (0~/132)%2=0 → Gênesis 1:1
       expect(
-        selecionarVersiculoDoDia(dia: 0, mensagens: [], livro: livroGenesis)
-            ['referencia'],
+        selecionarVersiculoDoDia(
+            dia: 0, mensagens: [], livro: livroGenesis)['referencia'],
         'Gênesis 1:1',
       );
       // A cada 66 dias o livro retorna e o capítulo avança.
       expect(
-        selecionarVersiculoDoDia(dia: 66, mensagens: [], livro: livroGenesis)
-            ['referencia'],
+        selecionarVersiculoDoDia(
+            dia: 66, mensagens: [], livro: livroGenesis)['referencia'],
         'Gênesis 2:1',
       );
       // Versículo avança a cada 66 × número de capítulos = 132 dias.
       expect(
-        selecionarVersiculoDoDia(dia: 132, mensagens: [], livro: livroGenesis)
-            ['referencia'],
+        selecionarVersiculoDoDia(
+            dia: 132, mensagens: [], livro: livroGenesis)['referencia'],
         'Gênesis 1:2',
       );
       // Ciclo completo: dia 264 volta a Gênesis 1:1 (determinismo).
       expect(
-        selecionarVersiculoDoDia(dia: 264, mensagens: [], livro: livroGenesis)
-            ['referencia'],
+        selecionarVersiculoDoDia(
+            dia: 264, mensagens: [], livro: livroGenesis)['referencia'],
         'Gênesis 1:1',
       );
     });
@@ -205,8 +214,8 @@ void main() {
 
     test('mensagens: fallback vazio e índice circular', () {
       expect(
-        selecionarVersiculoDoDia(dia: 0, mensagens: [], livro: livroGenesis)
-            ['mensagem'],
+        selecionarVersiculoDoDia(
+            dia: 0, mensagens: [], livro: livroGenesis)['mensagem'],
         'Deus te fortaleça neste dia.',
       );
       expect(
@@ -243,7 +252,13 @@ void main() {
   group('normalizarMensagens (E8/E9)', () {
     test('E9: itens não-string são descartados (sem "Instance of...")', () {
       expect(
-        normalizarMensagens([123, {'a': 1}, null, 'Ola  ', '  ']),
+        normalizarMensagens([
+          123,
+          {'a': 1},
+          null,
+          'Ola  ',
+          '  '
+        ]),
         ['Ola  '],
       );
     });

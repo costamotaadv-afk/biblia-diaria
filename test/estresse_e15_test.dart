@@ -34,7 +34,8 @@ void main() {
     );
   });
 
-  testWidgets('E15: favoritos mistos (versículos + capítulos) carregam e removem',
+  testWidgets(
+      'E15: favoritos mistos (versículos + capítulos) carregam e removem',
       (tester) async {
     // 200 versículos + 50 capítulos de Gênesis (carga mista, mesmo livro para
     // que só um arquivo seja carregado e o teste continue rápido).

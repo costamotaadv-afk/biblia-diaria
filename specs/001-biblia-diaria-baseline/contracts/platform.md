@@ -52,6 +52,9 @@ plataformas de desenvolvimento e validação.
 - Um único áudio por vez: todo novo trecho faz `stop` antes de `speak` (caso
   C3). Pausar/continuar respeitam a máquina de estados `_falando / _pausado /
   _leituraAtiva` (FR-008).
+- Capítulos gigantes (ex.: Salmos 119) são divididos em segmentos via
+  `dividirTextoParaFala` e falados sequencialmente (um áudio por vez) para o
+  engine não truncar silenciosamente (caso E12).
 - Texto vazio ou só espaços não inicia leitura (casos E5/B9).
 
 ### Contrato de falhas
@@ -123,7 +126,7 @@ plataformas de desenvolvimento e validação.
 | C9 | `load()` do banner sem try/catch → exceção assíncrona | Corrigido + testado |
 | C10 | `MobileAds.initialize()` sem GMS → crash no startup | Corrigido + testado |
 | C11 | TTS sem implementação (web/Linux) → `MissingPluginException` | Corrigido + testado |
-| C12 | `_tts.speak('')` ao continuar → exceção em alguns engines | Tratado por gate/estado |
+| C12 | `_tts.speak('')` ao continuar → exceção em alguns engines | Corrigido + testado |
 | B2 | Clipboard negado → doação "silenciosamente" perdida | Corrigido + testado |
 | B6 | Aparelho sem voz pt → dropdown vazio/erro | Corrigido |
 | B7 | `voz_tts_id` órfão → assert de "value not in items" | Corrigido + testado |

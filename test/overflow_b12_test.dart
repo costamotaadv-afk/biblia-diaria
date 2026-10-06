@@ -1,4 +1,5 @@
 import 'package:biblia_diaria/main.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -34,29 +35,39 @@ void main() {
     );
   });
 
-  testWidgets('B12: fonte grande (1.18) em tela de 320 px não gera overflow',
+  testWidgets('B12: grade de telas (320/360/411 px) sem overflow nas 4 abas',
       (tester) async {
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const BibliaApp());
-    await aguardarWidget(tester, find.text('Bíblia Diária'));
+    for (final largura in const [320.0, 360.0, 411.0]) {
+      tester.view.physicalSize = Size(largura, 640);
+      tester.view.devicePixelRatio = 1.0;
 
-    // Tela Início (a mais densa): sem overflow.
-    expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const BibliaApp());
+      await aguardarWidget(tester, find.text('Bíblia Diária'));
 
-    // Percorre as demais abas exercitando os layouts.
-    await tester.tap(find.text('Bíblia').last);
-    await tester.pump();
-    expect(tester.takeException(), isNull);
+      // Tela Início (a mais densa): sem overflow com fonte grande (1.18).
+      expect(tester.takeException(), isNull,
+          reason: 'B12: overflow na aba Início em $largura px.');
 
-    await tester.tap(find.text('Salvos').last);
-    await tester.pump();
-    expect(tester.takeException(), isNull);
+      // Percorre as demais abas exercitando os layouts.
+      await tester.tap(find.text('Bíblia').last);
+      await tester.pump();
+      expect(tester.takeException(), isNull,
+          reason: 'B12: overflow na aba Bíblia em $largura px.');
 
-    await tester.tap(find.text('Ajustes').last);
-    await tester.pump();
-    expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Salvos').last);
+      await tester.pump();
+      expect(tester.takeException(), isNull,
+          reason: 'B12: overflow na aba Salvos em $largura px.');
+
+      await tester.tap(find.text('Ajustes').last);
+      await tester.pump();
+      expect(tester.takeException(), isNull,
+          reason: 'B12: overflow na aba Ajustes em $largura px.');
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
   });
 }

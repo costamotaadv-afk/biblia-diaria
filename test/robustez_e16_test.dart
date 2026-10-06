@@ -34,8 +34,7 @@ void main() {
       ];
 
       // Guardiões de mapa filtram os itens malformados sem lançar TypeError.
-      final capitulos =
-          mapasSeguros(comoLista(livros.first['capitulos']));
+      final capitulos = mapasSeguros(comoLista(livros.first['capitulos']));
       expect(capitulos, hasLength(1));
       expect(capitulos.single['numero'], 1);
 
@@ -52,7 +51,8 @@ void main() {
       );
     });
 
-    test('Invariante 2: trecho ausente/corrompido retorna null (fallback na '
+    test(
+        'Invariante 2: trecho ausente/corrompido retorna null (fallback na '
         'UI) e nunca lança exceção', () {
       // Livro com capítulo sem versículos: nada resolvível.
       final livroVazio = <Map<String, dynamic>>[

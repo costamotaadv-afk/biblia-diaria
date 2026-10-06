@@ -313,7 +313,7 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 | 🟡 Baixa | E1–E4, E13, B5, B7, C9 | Dados/Plataforma | ✅ Corrigido + testado |
 | 🟡 Baixa | EST1–EST6 — Recursos de estudo (parsing/casamento/filtros) | Dados | ✅ Coberto + testado |
 
-**Cobertura automatizada atual:** `test/edge_cases_e10_test.dart`, `test/concurrency_c4_test.dart`, `test/platform_c10_c11_test.dart`, `test/clipboard_b2_test.dart`, `test/tts_qualidade_test.dart`, `test/limites_dados_test.dart`, `test/banner_c9_test.dart`, `test/catalogo_estudos_test.dart`.
+**Cobertura automatizada atual:** `test/edge_cases_e10_test.dart`, `test/concurrency_c4_test.dart`, `test/platform_c10_c11_test.dart`, `test/clipboard_b2_test.dart`, `test/tts_qualidade_test.dart`, `test/limites_dados_test.dart`, `test/dados_biblicos_test.dart`, `test/config_negocio_test.dart`, `test/banner_c9_test.dart`, `test/banner_timeout_c9_test.dart`, `test/rotacao_c8_test.dart`, `test/catalogo_estudos_test.dart`, `test/cache_livros_test.dart`, `test/estresse_c6_test.dart`, `test/estresse_e15_test.dart`, `test/robustez_e16_test.dart`, `test/troca_aba_c7_test.dart`, `test/tts_concorrencia_test.dart`, `test/tts_retomada_c12_test.dart`, `test/overflow_b12_test.dart`, `test/virada_dia_b4_test.dart`, `test/widget_test.dart`.
 
 > **Refatoração para testabilidade (E1–E4, E13, B5):** a lógica de seleção do versículo do dia e os casts de JSON foram extraídos para funções puras em `lib/dados_seguros.dart` (`diasDesdeEpoca`, `comoLista`, `selecionarVersiculoDoDia`), permitindo teste unitário determinístico sem widget.
 

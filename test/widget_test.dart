@@ -26,8 +26,8 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({
-      'favoritos_versiculos': <String>['João 3:16'],
-      'favoritos_capitulos': <String>['Salmos 23'],
+      'favoritos_versiculos': <String>['João 3:16', 'Livro Fantasma 1:1'],
+      'favoritos_capitulos': <String>['Salmos 23', '1 João 3'],
     });
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -58,10 +58,36 @@ void main() {
     expect(find.textContaining('assim amou Deus ao mundo'), findsOneWidget);
     expect(find.text('Carregando versículo...'), findsNothing);
 
+    // E14: favorito órfão (chave que não casa com nenhum livro) → fallback
+    // "Conteúdo não encontrado." em vez de carregar indefinidamente.
+    expect(find.text('Livro Fantasma 1:1'), findsOneWidget);
+    expect(find.text('Conteúdo não encontrado.'), findsOneWidget);
+
+    // B11: favorito de capítulo com prefixo numérico ("1 João 3") aparece.
+    expect(find.text('1 João 3'), findsOneWidget);
+
     await tester.tap(find.text('Ajustes').last);
     await tester.pump();
     expect(find.text('Tema escuro'), findsOneWidget);
     expect(find.text('Fonte maior (recomendado)'), findsOneWidget);
+
+    // T025/FR-011: persistência de tema_escuro com reinício simulado.
+    await tester.tap(find.byType(Switch).first); // alterna "Tema escuro"
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.pumpWidget(const BibliaApp());
+    await aguardarWidget(tester, find.text('Bíblia Diária'));
+    await tester.tap(find.text('Ajustes').last);
+    await tester.pump();
+    expect(
+      tester
+          .widget<SwitchListTile>(
+            find.widgetWithText(SwitchListTile, 'Tema escuro'),
+          )
+          .value,
+      isTrue,
+    );
 
     // B10: aviso anti-fraude do Pix presente na aba Ajustes (regressão de texto)
     // e rótulo Semantics da chave Pix acessível.

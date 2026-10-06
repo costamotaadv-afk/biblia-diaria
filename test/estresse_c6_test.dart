@@ -234,7 +234,8 @@ void main() {
           expect(
             tester.takeException(),
             isNull,
-            reason: 'C6 (UI): exceção de framework durante a expansão de $nome.',
+            reason:
+                'C6 (UI): exceção de framework durante a expansão de $nome.',
           );
 
           livrosCarregados++;

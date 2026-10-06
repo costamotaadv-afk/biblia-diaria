@@ -140,8 +140,7 @@ String? textoDeVersiculoEmLivros(
 ) {
   for (final livro in livros) {
     for (final capitulo in mapasSeguros(comoLista(livro['capitulos']))) {
-      for (final versiculo
-          in mapasSeguros(comoLista(capitulo['versiculos']))) {
+      for (final versiculo in mapasSeguros(comoLista(capitulo['versiculos']))) {
         final ref =
             '${livro['nome']} ${capitulo['numero']}:${versiculo['numero']}';
         if (ref == chave) return '${versiculo['texto']}';
