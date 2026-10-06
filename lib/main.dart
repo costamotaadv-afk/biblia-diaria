@@ -189,6 +189,14 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   Set<String> favoritosCapitulos = {};
   Set<String> favoritosEstudos = {};
   List<RecursoEstudo> _indiceEstudos = [];
+  // Estado de expansão da aba Bíblia. Um livro expandido vira linhas planas e
+  // LAZY no ListView (capítulos/versículos só montam quando visíveis), em vez
+  // de uma Column com todos os versículos de uma vez — o custo de CPU/memória
+  // que o caso C6 da matriz expunha (Salmos chegava a ~2.400 ListTiles em um
+  // único frame).
+  final Set<String> _livrosExpandidos = {};
+  final Map<String, List<dynamic>> _capitulosPorLivro = {};
+  final Set<String> _livrosComErro = {};
   String? _tipoFiltroEstudos;
   String _livroFiltroEstudos = '';
   final FlutterTts _tts = FlutterTts();
@@ -461,6 +469,31 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   /// falha transiente — caso C5 da matriz de QA).
   Future<Map<String, dynamic>?> _assegurarLivro(String nomeLivro) {
     return _cacheLivros.assegurar(nomeLivro);
+  }
+
+  /// Expande/recolhe um livro na aba Bíblia, carregando os capítulos sob
+  /// demanda (uma única vez, cacheado via [_assegurarLivro]). O conteúdo é
+  /// mantido como linhas planas e LAZY no ListView (ver [_montarTelaLeitura]).
+  Future<void> _alternarLivro(String nomeLivro) async {
+    if (_livrosExpandidos.remove(nomeLivro)) {
+      setState(() {});
+      return;
+    }
+    setState(() => _livrosExpandidos.add(nomeLivro));
+    if (_capitulosPorLivro.containsKey(nomeLivro) ||
+        _livrosComErro.contains(nomeLivro)) {
+      return;
+    }
+    final livro = await _assegurarLivro(nomeLivro);
+    if (!mounted) return;
+    setState(() {
+      if (livro == null) {
+        _livrosComErro.add(nomeLivro);
+      } else {
+        _capitulosPorLivro[nomeLivro] =
+            comoLista(livro['capitulos']) ?? const [];
+      }
+    });
   }
 
   Future<void> _configurarTts() async {
@@ -1109,168 +1142,183 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 
   Widget _montarTelaLeitura() {
+    // Linhas planas (descrições leves) para o ListView.builder LAZY: um livro
+    // expandido vira as linhas de capítulo/versículo, mas cada widget só é
+    // construído quando entra na viewport. Antes, um único livro grande
+    // (ex.: Salmos, ~2.400 versículos) montava todos os ListTiles de uma vez
+    // num frame — o custo de CPU/memória que o caso C6 da matriz expunha.
+    final linhas = <Widget Function()>[];
+    for (final livro in _indice) {
+      final nomeLivro = '${livro['nome']}';
+      final numCapitulos = livro['capitulos'] ?? 0;
+      final expandido = _livrosExpandidos.contains(nomeLivro);
+      linhas.add(() => _cartaoLivro(nomeLivro, numCapitulos, expandido));
+
+      if (!expandido) continue;
+
+      final capitulos = _capitulosPorLivro[nomeLivro];
+      if (capitulos == null) {
+        if (_livrosComErro.contains(nomeLivro)) {
+          linhas.add(() => _linhaLivroComErro());
+        } else {
+          linhas.add(() => _linhaCarregandoLivro());
+        }
+        continue;
+      }
+
+      for (final capRaw in capitulos.whereType<Map>()) {
+        final capitulo = Map<String, dynamic>.from(capRaw);
+        final numeroCapitulo = capitulo['numero'];
+        final chaveCapitulo = _chaveCapitulo(nomeLivro, numeroCapitulo);
+        final versiculos = comoLista(capitulo['versiculos']) ?? const [];
+        linhas.add(
+          () => _cabecalhoCapitulo(nomeLivro, numeroCapitulo, chaveCapitulo),
+        );
+        for (final vRaw in versiculos.whereType<Map>()) {
+          final versiculo = Map<String, dynamic>.from(vRaw);
+          final numeroVersiculo = versiculo['numero'];
+          final chaveVersiculo = '$nomeLivro $numeroCapitulo:$numeroVersiculo';
+          final texto = '${versiculo['texto']}';
+          linhas.add(() => _linhaVersiculo(nomeLivro, chaveVersiculo, texto));
+        }
+      }
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       physics: const ClampingScrollPhysics(),
       dragStartBehavior: DragStartBehavior.down,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      itemCount: _indice.length,
-      itemBuilder: (context, i) {
-        final nomeLivro = '${_indice[i]['nome']}';
-        final numCapitulos = _indice[i]['capitulos'] ?? 0;
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          child: ExpansionTile(
-            key: PageStorageKey<String>('livro_$nomeLivro'),
-            maintainState: true,
-            collapsedShape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            leading: const Icon(Icons.book_outlined),
-            title: Text(
-              nomeLivro,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            subtitle: Text('$numCapitulos capítulos'),
-            // O conteúdo do livro é carregado sob demanda ao expandir, o que
-            // evita baixar toda a Bíblia de uma vez (ótimo para a web).
-            children: <Widget>[
-              FutureBuilder<Map<String, dynamic>?>(
-                future: _assegurarLivro(nomeLivro),
-                builder: (context, snap) {
-                  if (snap.connectionState != ConnectionState.done) {
-                    return const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  final livro = snap.data;
-                  if (livro == null) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('Não foi possível carregar este livro.'),
-                    );
-                  }
-                  final capitulos = comoLista(livro['capitulos']) ?? const [];
-                  return _conteudoLivroWidgets(nomeLivro, capitulos);
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      itemCount: linhas.length,
+      itemBuilder: (context, i) => linhas[i](),
     );
   }
 
-  /// Constrói os blocos de capítulos e versículos de um livro já carregado.
-  Widget _conteudoLivroWidgets(
-    String nomeLivro,
-    List<dynamic> capitulos,
-  ) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: capitulos.whereType<Map>().expand<Widget>((capRaw) {
-        final capitulo = Map<String, dynamic>.from(capRaw);
-        final numeroCapitulo = capitulo['numero'];
-        final chaveCapitulo = _chaveCapitulo(nomeLivro, numeroCapitulo);
-        final capFav = favoritosCapitulos.contains(chaveCapitulo);
-        final versiculos = comoLista(capitulo['versiculos']) ?? [];
+  /// Cartão-cabeçalho de um livro (mesmo visual do antigo ExpansionTile), sem
+  /// montar o conteúdo — só o chevron gira ao expandir/recolher.
+  Widget _cartaoLivro(String nomeLivro, dynamic numCapitulos, bool expandido) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        onTap: () => _alternarLivro(nomeLivro),
+        leading: const Icon(Icons.book_outlined),
+        title: Text(
+          nomeLivro,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text('$numCapitulos capítulos'),
+        trailing: AnimatedRotation(
+          turns: expandido ? 0.5 : 0,
+          duration: const Duration(milliseconds: 200),
+          child: const Icon(Icons.expand_more),
+        ),
+      ),
+    );
+  }
 
-        final blocos = <Widget>[
-          Container(
-            margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Capítulo $numeroCapitulo',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                if (_temEstudos(chaveCapitulo, nomeLivro))
-                  IconButton(
-                    tooltip: 'Estudos do capítulo',
-                    icon: const Icon(Icons.auto_stories_outlined),
-                    onPressed: () =>
-                        _abrirEstudosDaReferencia(chaveCapitulo, nomeLivro),
-                  ),
-                IconButton(
-                  tooltip: 'Ouvir capítulo',
-                  onPressed: _ttsDisponivel
-                      ? () => _falarCapitulo(chaveCapitulo)
-                      : null,
-                  icon: const Icon(Icons.volume_up_outlined),
-                ),
-                IconButton(
-                  tooltip:
-                      capFav ? 'Remover capítulo salvo' : 'Salvar capítulo',
-                  onPressed: () => _toggleFavoritoCapitulo(chaveCapitulo),
-                  icon: Icon(capFav ? Icons.bookmark : Icons.bookmark_border),
-                ),
-              ],
+  Widget _linhaCarregandoLivro() {
+    return const Padding(
+      padding: EdgeInsets.all(24),
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _linhaLivroComErro() {
+    return const Padding(
+      padding: EdgeInsets.all(16),
+      child: Text('Não foi possível carregar este livro.'),
+    );
+  }
+
+  /// Cabeçalho de capítulo (mesmo visual do bloco antigo).
+  Widget _cabecalhoCapitulo(
+    String nomeLivro,
+    dynamic numeroCapitulo,
+    String chaveCapitulo,
+  ) {
+    final capFav = favoritosCapitulos.contains(chaveCapitulo);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Capítulo $numeroCapitulo',
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
-        ];
-
-        blocos.addAll(versiculos.whereType<Map>().map((vRaw) {
-          final versiculo = Map<String, dynamic>.from(vRaw);
-          final chaveVersiculo =
-              '$nomeLivro $numeroCapitulo:${versiculo['numero']}';
-          final isFav = favoritosVersiculos.contains(chaveVersiculo);
-          final texto = '${versiculo['texto']}';
-
-          return ListTile(
-            minVerticalPadding: 10,
-            title: Text(
-              chaveVersiculo,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
+          if (_temEstudos(chaveCapitulo, nomeLivro))
+            IconButton(
+              tooltip: 'Estudos do capítulo',
+              icon: const Icon(Icons.auto_stories_outlined),
+              onPressed: () =>
+                  _abrirEstudosDaReferencia(chaveCapitulo, nomeLivro),
             ),
-            subtitle: Text(texto),
-            trailing: Wrap(
-              spacing: 2,
-              children: [
-                if (_temEstudos(chaveVersiculo, nomeLivro))
-                  IconButton(
-                    tooltip: 'Estudos do versículo',
-                    icon: const Icon(Icons.auto_stories_outlined),
-                    onPressed: () =>
-                        _abrirEstudosDaReferencia(chaveVersiculo, nomeLivro),
-                  ),
-                IconButton(
-                  tooltip: 'Ouvir versículo',
-                  icon: const Icon(Icons.volume_up),
-                  onPressed: _ttsDisponivel
-                      ? () => _falarVersiculo(chaveVersiculo, texto)
-                      : null,
-                ),
-                IconButton(
-                  tooltip: isFav ? 'Remover dos salvos' : 'Salvar versículo',
-                  icon: Icon(
-                    isFav ? Icons.favorite : Icons.favorite_border,
-                    color: isFav ? Colors.redAccent : null,
-                  ),
-                  onPressed: () => _toggleFavoritoVersiculo(chaveVersiculo),
-                ),
-              ],
-            ),
-          );
-        }));
+          IconButton(
+            tooltip: 'Ouvir capítulo',
+            onPressed: _ttsDisponivel
+                ? () => _falarCapitulo(chaveCapitulo)
+                : null,
+            icon: const Icon(Icons.volume_up_outlined),
+          ),
+          IconButton(
+            tooltip: capFav ? 'Remover capítulo salvo' : 'Salvar capítulo',
+            onPressed: () => _toggleFavoritoCapitulo(chaveCapitulo),
+            icon: Icon(capFav ? Icons.bookmark : Icons.bookmark_border),
+          ),
+        ],
+      ),
+    );
+  }
 
-        return blocos;
-      }).toList(),
+  /// Linha de versículo (mesmo visual do bloco antigo).
+  Widget _linhaVersiculo(
+    String nomeLivro,
+    String chaveVersiculo,
+    String texto,
+  ) {
+    final isFav = favoritosVersiculos.contains(chaveVersiculo);
+    return ListTile(
+      minVerticalPadding: 10,
+      title: Text(
+        chaveVersiculo,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+      ),
+      subtitle: Text(texto),
+      trailing: Wrap(
+        spacing: 2,
+        children: [
+          if (_temEstudos(chaveVersiculo, nomeLivro))
+            IconButton(
+              tooltip: 'Estudos do versículo',
+              icon: const Icon(Icons.auto_stories_outlined),
+              onPressed: () =>
+                  _abrirEstudosDaReferencia(chaveVersiculo, nomeLivro),
+            ),
+          IconButton(
+            tooltip: 'Ouvir versículo',
+            icon: const Icon(Icons.volume_up),
+            onPressed: _ttsDisponivel
+                ? () => _falarVersiculo(chaveVersiculo, texto)
+                : null,
+          ),
+          IconButton(
+            tooltip: isFav ? 'Remover dos salvos' : 'Salvar versículo',
+            icon: Icon(
+              isFav ? Icons.favorite : Icons.favorite_border,
+              color: isFav ? Colors.redAccent : null,
+            ),
+            onPressed: () => _toggleFavoritoVersiculo(chaveVersiculo),
+          ),
+        ],
+      ),
     );
   }
 

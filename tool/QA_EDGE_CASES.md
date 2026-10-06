@@ -130,9 +130,13 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 - **Impacto se falhar:** livro aparece permanentemente como *"Não foi possível carregar"* mesmo após rede/arquivo se recuperarem. Falha de resiliência: exige `FutureBuilder` refazer ou limpar future em erro.
 
 **C6. Expandir os 66 livros (estado de memória máxima)**
-- **Input:** usuário expande todos os ExpansionTiles (ou automação faz `tap` em todos).
-- **Esperado:** `maintainState: true` + cache acumulam ~13MB de JSON + milhares de `ListTile` vivos.
+- **Input:** usuário expande todos os livros da aba Bíblia (ou automação faz `tap` em todos).
+- **Esperado:** a lista é **lazy** (`ListView.builder` com estado de expansão `_livrosExpandidos`):
+  cada livro vira linhas planas de capítulo/versículo montadas só quando entram na viewport.
+  Antes, `maintainState: true` + `Column` não-lazy montavam milhares de `ListTile` vivos num único
+  frame (Salmos → ~2.400 `ListTile`).
 - **Impacto se falhar:** OOM em aparelho Android de entrada; web pode travar. Teste de estresse: monitorar RSS/heap durante expansão sequencial.
+- **Status:** ✅ Corrigido (lista lazy em `lib/main.dart`) + testado por `test/estresse_c6_test.dart`.
 
 **C7. Troca de aba durante carregamento de livro**
 - **Input:** expandir livro → trocar para "Salvos" antes do `FutureBuilder` completar.
@@ -294,7 +298,8 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 | 🟠 Média | C4 — Race de persistência de favoritos | Concorrência | ✅ Mitigado + testado |
 | 🟠 Média | C5 — Sem retry após falha transiente de livro | Estado | ⏳ Pendente |
 | 🟠 Média | E3 — `capitulos` com tipo errado → crash no builder | Dados | ✅ Corrigido + testado |
-| 🟠 Média | E15 / C6 — Estresse de favoritos e livros expandidos | Estresse | ⏳ Pendente |
+| 🟠 Média | E15 — Estresse de favoritos (1000+ na tela Salvos) | Estresse | ⏳ Pendente |
+| 🟠 Média | C6 — Estresse de livros expandidos (memória/estado) | Estresse | ✅ Corrigido + testado |
 | 🟡 Baixa | B4, C8 — Virada do dia, rotação | Diversos | ⏳ Pendente |
 | 🟡 Baixa | E1–E4, E13, B5, B7, C9 | Dados/Plataforma | ✅ Corrigido + testado |
 | 🟡 Baixa | EST1–EST6 — Recursos de estudo (parsing/casamento/filtros) | Dados | ✅ Coberto + testado |

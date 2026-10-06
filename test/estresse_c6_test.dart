@@ -191,6 +191,11 @@ void main() {
           // Aguarda a decodificação real (runAsync) montar o primeiro
           // versículo ("$nome 1:1"). Sem runAsync, o rootBundle nunca
           // completaria no relógio fake e o teste daria timeout.
+          //
+          // A renderização é lazy (ListView.builder): o conteúdo recém-expandido
+          // pode nascer fora da viewport — p.ex. o último livro (Apocalipse),
+          // cujo cabeçalho fica no rodapé da lista. Além de aguardar a carga,
+          // revela o trecho abaixo do cabeçalho para montar o marcador.
           final marcador = find.text('$nome 1:1');
           var carregou = false;
           for (var tentativa = 0; tentativa < 300; tentativa++) {
@@ -201,6 +206,10 @@ void main() {
             if (marcador.evaluate().isNotEmpty) {
               carregou = true;
               break;
+            }
+            if (tentativa % 5 == 0) {
+              await tester.drag(lista, const Offset(0, -120));
+              await tester.pump();
             }
             if (tester.takeException() != null) break;
           }

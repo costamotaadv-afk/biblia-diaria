@@ -177,10 +177,12 @@ tratado graciosamente.
 **Independent Test**: expandir livros com prefixo numérico/composto e abrir
 capítulos em sequência sem rede.
 
-- [ ] T013 [US2] Caso **C6**: criar `test/estresse_c6_test.dart` (um único
+- [x] T013 [US2] Caso **C6**: criar `test/estresse_c6_test.dart` (um único
       `testWidgets` — regra do `runAsync`) que expande os 66 livros com os
       assets reais de forma sequencial, percorre versículos e rola a lista, sem
-      exceção nem estado preso; atualizar a matriz C6 → Coberto.
+      exceção nem estado preso; atualizar a matriz C6 → Coberto. **Feito**:
+      teste criado e lista de livros tornada lazy (`lib/main.dart`) — C6 passou
+      de travar (~10 min) para ~54 s.
 - [ ] T014 [P] [US2] Estender `test/cache_livros_test.dart` (C5): falha
       transiente durante navegação entre livros (não só no primeiro acesso) e
       deduplicação de futuros concorrentes ao expandir abas em sequência rápida.
