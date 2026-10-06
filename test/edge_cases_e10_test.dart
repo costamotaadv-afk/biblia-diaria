@@ -127,4 +127,67 @@ void main() {
       expect(numeroPorExtenso(''), '');
     });
   });
+
+  group('E11 — referência cruzada malformada (4 dígitos)', () {
+    test('Salmos 1190:12 não casa e não lança', () {
+      final resultado =
+          textoParaLeituraNatural('Veja Salmos 1190:12, amigo.');
+      expect(resultado, isNotEmpty);
+      // 4 dígitos excedem \d{1,3}: a referência fica literal (sem virar horário
+      // nem crash) — decisão documentada na matriz (E11).
+      expect(resultado, contains('1190:12'));
+    });
+
+    test('prefixo numérico 1 Co 2:3 continua preservado (E11)', () {
+      expect(
+        textoParaLeituraNatural('Veja 1 Co 2:3 no contexto.'),
+        contains('primeira co, capítulo dois, versículo três'),
+      );
+    });
+  });
+
+  group('E6/E7 — referência com número inválido não gera TTS absurdo', () {
+    test('numero ausente/"abc" não crasha (E6)', () {
+      expect(referenciaParaLeitura('Gênesis abc:1'), 'Gênesis abc:1');
+    });
+
+    test('numero > 999 cai no literal, sem virar horário (E7)', () {
+      expect(referenciaParaLeitura('Gênesis 1000:1'), 'Gênesis 1000:1');
+    });
+  });
+
+  group('E12 — dividirTextoParaFala (capítulo gigante)', () {
+    test('texto curto devolve um único segmento', () {
+      expect(dividirTextoParaFala('Olá mundo.'), ['Olá mundo.']);
+    });
+
+    test('texto vazio devolve lista vazia', () {
+      expect(dividirTextoParaFala(''), isEmpty);
+    });
+
+    test('divide em segmentos <= maxCaracteres', () {
+      final frases = List.generate(
+        200,
+        (i) => 'Versículo $i. Esta é uma frase de teste que continua.',
+      ).join(' ');
+      final segmentos = dividirTextoParaFala(frases, maxCaracteres: 200);
+      expect(segmentos.length, greaterThan(1));
+      for (final segmento in segmentos) {
+        expect(segmento.length, lessThanOrEqualTo(200));
+      }
+      expect(segmentos.every((s) => s.trim().isNotEmpty), isTrue);
+    });
+
+    test('corta em pontuação, preservando o ponto final', () {
+      final segmentos = dividirTextoParaFala(
+        'Primeira frase. Segunda frase! Terceira? Quarta; Quinta.',
+        maxCaracteres: 30,
+      );
+      // Cada segmento (exceto o último) termina em pontuação forte.
+      for (var i = 0; i < segmentos.length - 1; i++) {
+        final ultimo = segmentos[i].substring(segmentos[i].length - 1);
+        expect(const ['.', '!', '?', ';'], contains(ultimo));
+      }
+    });
+  });
 }

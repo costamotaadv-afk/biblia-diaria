@@ -63,6 +63,25 @@ void main() {
     expect(find.text('Tema escuro'), findsOneWidget);
     expect(find.text('Fonte maior (recomendado)'), findsOneWidget);
 
+    // B10: aviso anti-fraude do Pix presente na aba Ajustes (regressão de texto)
+    // e rótulo Semantics da chave Pix acessível.
+    await tester.scrollUntilVisible(
+      find.textContaining('confira no banco'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    expect(
+      find.textContaining('confira no banco o nome de quem receberá'),
+      findsOneWidget,
+    );
+    final semantica = tester.ensureSemantics();
+    expect(
+      find.bySemanticsLabel(RegExp('Chave Pix por e-mail')),
+      findsOneWidget,
+    );
+    semantica.dispose();
+
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });

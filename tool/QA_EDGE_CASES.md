@@ -55,6 +55,7 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 - **Input:** `"1000"` (não existe na Bíblia, mas JSON pode ser malformado).
 - **Esperado:** `escreverNumero` retorna o dígito cru `"1000"` → TTS lê como número. Sem crash.
 - **Impacto se falhar:** se o TTS interpretar "1000" como horário/telefone, a leitura soa errada; teste deve garantir fallback textual.
+- **Status:** ✅ Corrigido (`numeroPorExtenso`/`escreverNumero` devolvem o literal) + coberto por `test/edge_cases_e10_test.dart`.
 
 **E8. `mensagens.json` vazio**
 - **Input:** `[]`.
@@ -77,11 +78,13 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 - **Input:** texto contendo `"Salmos 1190:12"` (malformado) ou abreviatura `"1 Co 2:3"`.
 - **Esperado:** `RegExp(r'([A-Za-zÀ-ÿ]+)\s+(\d{1,3}):(\d{1,3})')` não casa `1190` (4 dígitos) → TTS lê `"1190:12"` como horário. Para `"1 Co 2:3"`, casa `"Co 2:3"` e **perde o "1"** do livro.
 - **Impacto se falhar:** leitura incoerente; teste deve validar o mapeamento de referências cruzadas dentro dos capítulos longos (Salmos, Isaías).
+- **Status:** ✅ Documentado (4 dígitos ficam literais, sem virar horário) + coberto por `test/edge_cases_e10_test.dart`.
 
 **E12. Capítulo gigante no TTS (Salmos 119 — 176 versículos)**
 - **Input:** tocar "Ouvir capítulo" em Salmos 119 (~4.000+ caracteres).
 - **Esperado:** engine TTS pode truncar silenciosamente; `setCompletionHandler` dispara antes do fim → leitura "termina" incompleta.
 - **Impacto se falhar:** usuário acredita ter ouvido o capítulo inteiro quando só ouviu metade — risco de conteúdo religioso truncado. Teste de estresse: medir tempo de fala vs. texto esperado.
+- **Status:** ✅ Corrigido (`dividirTextoParaFala` divide em segmentos na pontuação) + coberto por `test/edge_cases_e10_test.dart`.
 
 **E13. Relógio do aparelho antes de 2024 (dias negativos) e datas extremas**
 - **Input:** `DateTime(2023-06-15)` → `_diasDesdeEpoca` negativo.
@@ -98,6 +101,7 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 - **Input:** 1000+ chaves salvas.
 - **Esperado:** `_montarTelaSalvos` usa `ListView(children:)` **não-lazy** e cada item faz varredura linear `O(versículos totais)` em `_buscarTextoVersiculo` → O(N×31100).
 - **Impacto se falhar:** congelamento de UI (jank) em aparelho básico; em casos extremos, OOM. **Teste de estresse recomendado**: 500/1000/5000 favoritos + medir frame budget.
+- **Status:** ✅ Coberto por `test/estresse_e15_test.dart` (carga mista + remoção no meio).
 
 ---
 
@@ -128,6 +132,7 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 - **Input:** `rootBundle.loadString` falha uma vez (I/O, web cache) em `Gênesis`.
 - **Esperado:** `_carregarLivroMap` retorna `null`; mas `_futuresLivros['Gênesis']` **fica resolvido com null para sempre** → retry nunca acontece até reiniciar.
 - **Impacto se falhar:** livro aparece permanentemente como *"Não foi possível carregar"* mesmo após rede/arquivo se recuperarem. Falha de resiliência: exige `FutureBuilder` refazer ou limpar future em erro.
+- **Status:** ✅ Corrigido com `CacheDeLivros` (falha remove o future → retry) + coberto por `test/cache_livros_test.dart`.
 
 **C6. Expandir os 66 livros (estado de memória máxima)**
 - **Input:** usuário expande todos os livros da aba Bíblia (ou automação faz `tap` em todos).
@@ -142,11 +147,13 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 - **Input:** expandir livro → trocar para "Salvos" antes do `FutureBuilder` completar.
 - **Esperado:** `_assegurarLivro` continua em background e preenche cache; sem `setState` pós-dispose (guardado por `mounted`).
 - **Impacto se falhar:** exceção "setState called after dispose" → crash em debug. O guard `mounted` existe mas deve ser coberto por teste para regressão.
+- **Status:** ✅ Coberto por `test/troca_aba_c7_test.dart` (guard `mounted` + lista lazy).
 
 **C8. Rotação de tela durante leitura TTS / banner**
 - **Input:** girar o aparelho com leitura ativa e banner carregado.
 - **Esperado:** `_larguraSolicitada` muda → `didChangeDependencies` recarrega banner; TTS continua (audível, independente de UI).
 - **Impacto se falhar:** banner antigo não-disposto (`_bannerAd?.dispose()` é assíncrono) → vazamento de memória do SDK de anúncios; leitura perde estado de pause.
+- **Status:** ✅ Coberto por `test/rotacao_c8_test.dart` (rotação recarrega o banner sem exceção).
 
 **C9. Banner: falha de `load()` / `MissingPluginException` / dispose durante load**
 - **Input:** emulador sem Google Play Services, ou toggle de aba durante `await banner.load()`.
@@ -170,6 +177,7 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 - **Input:** pausar e clicar "Continuar" (código chama `_tts.speak('')`).
 - **Esperado:** alguns engines (Android sem serviço de fala ativo) lançam erro em string vazia → exceção não tratada em `_alternarPlayPause`.
 - **Impacto se falhar:** ao tocar "Continuar", nada acontece ou o app lança erro → usuário preso no estado pausado.
+- **Status:** ✅ Corrigido (falha de retomada encerra graciosamente, sem desabilitar o TTS) + coberto por `test/tts_retomada_c12_test.dart`.
 
 **C13. Duplo-toque em "Copiar chave Pix"**
 - **Input:** dois taps no botão (ou tap em "Copiar" no diálogo).
@@ -234,6 +242,7 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 - **Input:** fluxo de doação sem o aviso *"confira o nome de quem receberá"*.
 - **Esperado:** aviso presente (implementado) e acessível via Semantics; teste de regressão de texto.
 - **Impacto se falhar:** doador manda Pix para chave trocada/fraudulenta sem conferência → dano financeiro ao usuário e à reputação do app.
+- **Status:** ✅ Coberto por `test/widget_test.dart` (aviso de texto + Semantics da chave).
 
 **B11. Favorito de capítulo com nome composto/numérico ("1 João 3")**
 - **Input:** salvar `"1 João 3"`, depois buscar na tela Salvos.
@@ -296,11 +305,11 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 | 🔴 Alta | C11 — TTS quebra na web (plataforma atual) | Plataforma | ✅ Corrigido + testado |
 | 🔴 Alta | B2 — Clipboard negado = doação perdida sem feedback | Permissão | ✅ Corrigido + testado |
 | 🟠 Média | C4 — Race de persistência de favoritos | Concorrência | ✅ Mitigado + testado |
-| 🟠 Média | C5 — Sem retry após falha transiente de livro | Estado | ⏳ Pendente |
+| 🟠 Média | C5 — Sem retry após falha transiente de livro | Estado | ✅ Corrigido + testado |
 | 🟠 Média | E3 — `capitulos` com tipo errado → crash no builder | Dados | ✅ Corrigido + testado |
-| 🟠 Média | E15 — Estresse de favoritos (1000+ na tela Salvos) | Estresse | ⏳ Pendente |
+| 🟠 Média | E15 — Estresse de favoritos (1000+ na tela Salvos) | Estresse | ✅ Corrigido + testado |
 | 🟠 Média | C6 — Estresse de livros expandidos (memória/estado) | Estresse | ✅ Corrigido + testado |
-| 🟡 Baixa | B4, C8 — Virada do dia, rotação | Diversos | ⏳ Pendente |
+| 🟡 Baixa | B4, C8 — Virada do dia, rotação | Diversos | ✅ Corrigido + testado |
 | 🟡 Baixa | E1–E4, E13, B5, B7, C9 | Dados/Plataforma | ✅ Corrigido + testado |
 | 🟡 Baixa | EST1–EST6 — Recursos de estudo (parsing/casamento/filtros) | Dados | ✅ Coberto + testado |
 

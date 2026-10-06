@@ -168,3 +168,52 @@ String textoParaLeituraNatural(String texto) {
   );
   return t;
 }
+
+/// Divide um texto longo em segmentos de fala com no máximo [maxCaracteres]
+/// caracteres, cortando na última pontuação forte (`.`, `!`, `?`, `;`) — sem
+/// quebrar palavras. Se a janela não tiver pontuação, corta no último espaço;
+/// numa palavra única gigante, corta no limite mesmo assim (fallback).
+///
+/// Textos curtos são devolvidos como uma lista de um único elemento. Usado para
+/// capítulos gigantes (E12, ex.: Salmos 119) que os engines de TTS truncam
+/// silenciosamente quando o texto passa de alguns milhares de caracteres.
+List<String> dividirTextoParaFala(String texto, {int maxCaracteres = 1500}) {
+  final t = texto.trim();
+  if (t.isEmpty) return const <String>[];
+  if (t.length <= maxCaracteres) return <String>[t];
+
+  final segmentos = <String>[];
+  var inicio = 0;
+  while (inicio < t.length) {
+    if (inicio + maxCaracteres >= t.length) {
+      final resto = t.substring(inicio).trim();
+      if (resto.isNotEmpty) segmentos.add(resto);
+      break;
+    }
+    final janela = t.substring(inicio, inicio + maxCaracteres);
+    var corte = _ultimoIndiceDePontuacao(janela);
+    if (corte >= 0) {
+      corte += 1; // inclui a pontuação no segmento
+    } else {
+      corte = janela.lastIndexOf(' ');
+    }
+    if (corte <= 0) corte = maxCaracteres;
+    final segmento = t.substring(inicio, inicio + corte).trim();
+    if (segmento.isNotEmpty) segmentos.add(segmento);
+    inicio += corte;
+    while (inicio < t.length && t[inicio] == ' ') {
+      inicio++;
+    }
+  }
+  return segmentos;
+}
+
+/// Índice da última ocorrência de uma pontuação forte dentro de [s] (ou -1).
+int _ultimoIndiceDePontuacao(String s) {
+  var indice = -1;
+  for (final pontuacao in const ['.', '!', '?', ';']) {
+    final posicao = s.lastIndexOf(pontuacao);
+    if (posicao > indice) indice = posicao;
+  }
+  return indice;
+}

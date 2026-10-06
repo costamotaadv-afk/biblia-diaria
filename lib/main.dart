@@ -204,6 +204,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   bool _pausado = false;
   bool _leituraAtiva = false;
   String? _textoLeituraAtual;
+  // Fila de segmentos pendentes de fala (capítulos gigantes, E12). O completion
+  // handler consome um por vez para o engine nunca truncar silenciosamente.
+  final List<String> _filaFala = [];
   List<VozTts> _vozesDisponiveis = [];
   String? _vozSelecionadaId;
   String? _vozMasculinaId;
@@ -657,6 +660,19 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     });
     _tts.setCompletionHandler(() {
       if (!mounted) return;
+      if (_filaFala.isNotEmpty) {
+        final proximo = _filaFala.removeAt(0);
+        _tts.speak(proximo).catchError((Object _) {
+          if (mounted) {
+            setState(() {
+              _ttsDisponivel = false;
+              _leituraAtiva = false;
+              _filaFala.clear();
+            });
+          }
+        });
+        return;
+      }
       setState(() {
         _falando = false;
         _pausado = false;
@@ -752,6 +768,13 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     }
     if (!mounted) return;
 
+    // Capítulos gigantes (E12) são divididos em segmentos curtos; o completion
+    // handler consome a fila um por vez (fala sequencial, sem truncar).
+    final segmentos = dividirTextoParaFala(texto);
+    _filaFala
+      ..clear()
+      ..addAll(segmentos.skip(1));
+
     setState(() {
       _textoLeituraAtual = texto;
       _falando = false;
@@ -760,12 +783,13 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     });
 
     try {
-      await _tts.speak(texto);
+      await _tts.speak(segmentos.first);
     } catch (_) {
       if (mounted) {
         setState(() {
           _ttsDisponivel = false;
           _leituraAtiva = false;
+          _filaFala.clear();
         });
       }
     }
@@ -797,7 +821,18 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       try {
         await _tts.speak('');
       } catch (_) {
-        if (mounted) setState(() => _ttsDisponivel = false);
+        // Falha de retomada (engine sem suporte a speak vazio): encerra o
+        // trecho graciosamente, sem desabilitar o TTS para a sessão inteira
+        // (caso C12 da matriz de QA).
+        if (mounted) {
+          setState(() {
+            _falando = false;
+            _pausado = false;
+            _leituraAtiva = false;
+            _textoLeituraAtual = null;
+            _filaFala.clear();
+          });
+        }
         return;
       }
       if (mounted) {

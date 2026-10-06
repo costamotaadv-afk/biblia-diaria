@@ -183,10 +183,10 @@ capítulos em sequência sem rede.
       exceção nem estado preso; atualizar a matriz C6 → Coberto. **Feito**:
       teste criado e lista de livros tornada lazy (`lib/main.dart`) — C6 passou
       de travar (~10 min) para ~54 s.
-- [ ] T014 [P] [US2] Estender `test/cache_livros_test.dart` (C5): falha
+- [x] T014 [P] [US2] Estender `test/cache_livros_test.dart` (C5): falha
       transiente durante navegação entre livros (não só no primeiro acesso) e
       deduplicação de futuros concorrentes ao expandir abas em sequência rápida.
-- [ ] T015 [P] [US2] Blindar a montagem de chave de capítulo/versículo em
+- [x] T015 [P] [US2] Blindar a montagem de chave de capítulo/versículo em
       `_conteudoLivroWidgets` (`lib/main.dart`) contra `numero` inválido
       (E6/E7): número ausente/`"abc"`/`>999` não gera crash nem TTS absurdo;
       adicionar cobertura em `test/limites_dados_test.dart`/`test/edge_cases_e10_test.dart`.
@@ -206,10 +206,10 @@ capítulos em sequência sem rede.
       em "salvar capítulo" e alternância rápida versículo↔capítulo — fila
       serializada last-write-wins por chave; estado final em disco igual ao da
       memória após reinício simulado.
-- [ ] T017 [P] [US3] Estender `test/estresse_e15_test.dart` (E15): carga mista
+- [x] T017 [P] [US3] Estender `test/estresse_e15_test.dart` (E15): carga mista
       (capítulos + versículos, 200+ itens), ordenação lexicográfica e remoção no
       meio da lista sem perda nem jank.
-- [ ] T018 [P] [US3] Caso **C7**: teste de troca de aba durante carregamento —
+- [x] T018 [P] [US3] Caso **C7**: teste de troca de aba durante carregamento —
       mock de carregamento lento (`rootBundle` sem completar) + navegação
       Bíblia→Salvos antes do `FutureBuilder` resolver; assert de ausência de
 - [ ] T019 [US3] Confirmar E14 (favorito órfão → `"Conteúdo não encontrado."`)
@@ -228,20 +228,20 @@ gigantes) e resiliente a falhas de engine/plataforma.
 **Independent Test**: voz pt-BR lendo versículo e capítulo com pausa/continuação;
 plataforma sem TTS mostra botões desabilitados.
 
-- [ ] T020 [P] [US4] Caso **E11**: ampliar `test/edge_cases_e10_test.dart` para
+- [x] T020 [P] [US4] Caso **E11**: ampliar `test/edge_cases_e10_test.dart` para
       referência cruzada malformada com 4 dígitos (`"Salmos 1190:12"`); decidir e
       documentar na matriz o comportamento esperado de `textoParaLeituraNatural`
       em `lib/leitura_natural.dart` (ler literalmente sem soar como horário, sem
       crash, sem engolir prefixo de `"1 Co 2:3"`); ajustar a função se a saída
       ficar incoerente.
-- [ ] T021 [P] [US4] Caso **E12**: extrair função pura de divisão de fala em
+- [x] T021 [P] [US4] Caso **E12**: extrair função pura de divisão de fala em
       `lib/leitura_natural.dart` (ex.: `dividirTextoParaFala(String, {int
       maxCaracteres})` — corta em pontuação, não quebra palavras) com testes
       unitários usando o texto real de Salmos 119 (~4.000 caracteres); aplicar
       em `_iniciarLeitura`/`_falarCapitulo` de `lib/main.dart` com fala
       sequencial por segmento (um áudio por vez; o trecho continua manual e não
       contínuo); atualizar matriz E12 → Coberto.
-- [ ] T022 [P] [US4] Caso **C12**: teste em `test/tts_concorrencia_test.dart`
+- [x] T022 [P] [US4] Caso **C12**: teste em `test/tts_concorrencia_test.dart`
       com mock que lança erro em `_tts.speak('')` ao retomar; refinar
       `_alternarPlayPause` (`lib/main.dart`) para que a falha de retomada
       encerre o trecho com aviso e volte ao estado ocioso — sem derrubar
@@ -287,7 +287,7 @@ anti-fraude.
 **Independent Test**: copiar com sucesso e com permissão negada; conferir aviso
 de verificação do recebedor.
 
-- [ ] T027 [P] [US6] Caso **B10**: teste de regressão de texto/Semantics
+- [x] T027 [P] [US6] Caso **B10**: teste de regressão de texto/Semantics
       (novo arquivo ou `test/widget_test.dart`) garantindo que a aba Ajustes
       exibe o aviso "confira no banco o nome de quem receberá" e que o rótulo
       Semantics da chave Pix está presente; atualizar matriz B10 → Coberto.
@@ -310,7 +310,7 @@ de verificação do recebedor.
 **Independent Test**: navegar entre abas em plataforma sem suporte → app estável,
 sem anúncios e sem erro.
 
-- [ ] T030 [P] [US7] Caso **C8**: teste (estender `test/banner_c9_test.dart` ou
+- [x] T030 [P] [US7] Caso **C8**: teste (estender `test/banner_c9_test.dart` ou
       novo arquivo) simulando mudança de tamanho/orientação com leitura TTS
       ativa e banner carregado (canais mockados): sem exceção, banner recarregado
       com dispose do anterior e estado de TTS preservado; corrigir

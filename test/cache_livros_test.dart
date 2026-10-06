@@ -58,4 +58,26 @@ void main() {
     await cache.assegurar('Gênesis');
     expect(carregados, ['Gênesis', 'Êxodo']); // sem recarga
   });
+
+  test('C5: falha transiente em livro não-primeiro permite retry', () async {
+    final chamadasPorLivro = <String, int>{};
+    final cache = CacheDeLivros(carregador: (nome) async {
+      chamadasPorLivro[nome] = (chamadasPorLivro[nome] ?? 0) + 1;
+      // Êxodo falha uma vez na 1ª tentativa; os demais carregam de cara.
+      if (nome == 'Êxodo' && chamadasPorLivro[nome] == 1) return null;
+      return <String, dynamic>{'nome': nome, 'capitulos': <dynamic>[]};
+    });
+
+    // Navega Gênesis (ok) → Êxodo (falha transiente) → retry Êxodo.
+    await cache.assegurar('Gênesis');
+    expect(cache.contem('Gênesis'), isTrue);
+
+    expect(await cache.assegurar('Êxodo'), isNull);
+    expect(cache.contem('Êxodo'), isFalse);
+
+    final exodo = await cache.assegurar('Êxodo'); // retry após a falha
+    expect(exodo, isNotNull);
+    expect(cache.contem('Êxodo'), isTrue);
+    expect(chamadasPorLivro['Êxodo'], 2);
+  });
 }

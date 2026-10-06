@@ -34,16 +34,18 @@ void main() {
     );
   });
 
-  testWidgets('E15: 200 favoritos na tela Salvos carregam sem travar',
+  testWidgets('E15: favoritos mistos (versículos + capítulos) carregam e removem',
       (tester) async {
-    // 200 versículos de Gênesis já salvos (todos no mesmo livro, para que só
-    // um arquivo seja carregado e o teste continue rápido).
-    final favoritos = List<String>.generate(
+    // 200 versículos + 50 capítulos de Gênesis (carga mista, mesmo livro para
+    // que só um arquivo seja carregado e o teste continue rápido).
+    final versiculos = List<String>.generate(
       200,
       (i) => 'Gênesis ${(i % 50) + 1}:${(i % 31) + 1}',
     );
+    final capitulos = List<String>.generate(50, (i) => 'Gênesis ${i + 1}');
     SharedPreferences.setMockInitialValues({
-      'favoritos_versiculos': favoritos,
+      'favoritos_versiculos': versiculos,
+      'favoritos_capitulos': capitulos,
     });
 
     await tester.pumpWidget(const BibliaApp());
@@ -53,15 +55,30 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
 
-    // A tela "Salvos" ordena as chaves por texto (comportamento do app), então
-    // "Gênesis 10:10" vem antes de "Gênesis 1:1" (o dígito '0' < ':'). O primeiro
-    // item visível precisa resolver com o texto real do versículo.
-    final ordenados = favoritos.toList()..sort();
-    final primeiroChave = ordenados.first;
-    await aguardarWidget(tester, find.text(primeiroChave));
+    // Seção de capítulos no topo; a de versículos fica abaixo (fora da viewport).
+    expect(find.text('Capítulos salvos'), findsOneWidget);
 
-    // Todos os itens visíveis carregam o conteúdo: o placeholder "Carregando..."
-    // some assim que o livro Gênesis é carregado no cache.
+    final lista = find.byType(ListView).last;
+    await tester.dragUntilVisible(
+      find.text('Versículos salvos'),
+      lista,
+      const Offset(0, -300),
+      maxIteration: 100,
+    );
+    await tester.pump();
+    expect(find.text('Versículos salvos'), findsOneWidget);
+
+    final ordenados = versiculos.toList()..sort();
+    final primeiroChave = ordenados.first;
+    await tester.dragUntilVisible(
+      find.text(primeiroChave),
+      lista,
+      const Offset(0, -200),
+      maxIteration: 100,
+    );
+    await tester.pump();
+
+    // Todos os itens visíveis carregam o conteúdo: o placeholder some.
     for (var tentativa = 0; tentativa < 100; tentativa++) {
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 10)),
@@ -72,10 +89,23 @@ void main() {
       }
     }
     expect(find.textContaining('Carregando versículo...'), findsNothing);
-
-    // Garante que conteúdo real foi renderizado (não "Conteúdo não encontrado.").
     expect(find.textContaining('princípio'), findsWidgets);
     expect(tester.takeException(), isNull);
+
+    // Remoção no meio da lista: o item some sem perda nem jank.
+    final deleteDoAlvo = find.descendant(
+      of: find.ancestor(
+        of: find.text(primeiroChave),
+        matching: find.byType(Card),
+      ),
+      matching: find.byTooltip('Remover versículo salvo'),
+    );
+    await tester.ensureVisible(deleteDoAlvo.first);
+    await tester.pump();
+    await tester.tap(deleteDoAlvo.first);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text(primeiroChave), findsNothing);
 
     // Rola até o fim da lista para renderizar os itens de baixo.
     await tester.fling(
