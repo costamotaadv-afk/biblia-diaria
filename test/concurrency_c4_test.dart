@@ -112,7 +112,7 @@ void main() {
     await tester.tap(find.text('Salvos').last);
     await aguardarWidget(
       tester,
-      find.text('Nenhum versículo ou capítulo salvo ainda.'),
+      find.text('Nenhum versículo, capítulo ou estudo salvo ainda.'),
     );
 
     // ── Fase 2: toque único → favorito persiste após reinício ─────────────

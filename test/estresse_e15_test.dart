@@ -1,4 +1,5 @@
 import 'package:biblia_diaria/main.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -52,8 +53,28 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
 
-    // O primeiro favorito resolve com o texto real do versículo.
-    await aguardarWidget(tester, find.textContaining('No princípio'));
+    // A tela "Salvos" ordena as chaves por texto (comportamento do app), então
+    // "Gênesis 10:10" vem antes de "Gênesis 1:1" (o dígito '0' < ':'). O primeiro
+    // item visível precisa resolver com o texto real do versículo.
+    final ordenados = favoritos.toList()..sort();
+    final primeiroChave = ordenados.first;
+    await aguardarWidget(tester, find.text(primeiroChave));
+
+    // Todos os itens visíveis carregam o conteúdo: o placeholder "Carregando..."
+    // some assim que o livro Gênesis é carregado no cache.
+    for (var tentativa = 0; tentativa < 100; tentativa++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump();
+      if (find.textContaining('Carregando versículo...').evaluate().isEmpty) {
+        break;
+      }
+    }
+    expect(find.textContaining('Carregando versículo...'), findsNothing);
+
+    // Garante que conteúdo real foi renderizado (não "Conteúdo não encontrado.").
+    expect(find.textContaining('princípio'), findsWidgets);
     expect(tester.takeException(), isNull);
 
     // Rola até o fim da lista para renderizar os itens de baixo.

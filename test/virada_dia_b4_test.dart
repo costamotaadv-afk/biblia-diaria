@@ -1,4 +1,5 @@
 import 'package:biblia_diaria/main.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -54,5 +55,23 @@ void main() {
     // continuar exibindo o versículo de ontem.
     await aguardarWidget(tester, find.text('Êxodo 1:1'));
     expect(find.text('Gênesis 1:1'), findsNothing);
+
+    // T011/B4 (2ª virada, sem sair do Início): o usuário permanece na Home;
+    // a próxima INTERAÇÃO (salvar versículo) dispara o rebuild, que recalcula
+    // o conteúdo do dia 2 (Levítico 1:1) e carrega o livro novo sob demanda.
+    // O setState posterior ao `_cacheLivros.assegurar` é guardado por `mounted`
+    // — nenhum "setState called after dispose" pode ser lançado.
+    dataAtual = DateTime(2024, 1, 3); // dia 2 → Levítico 1:1
+    // Rola a Home para o botão sair de trás da NavigationBar e ficar tocável.
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -220),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Salvar versículo').last);
+    await tester.pump();
+    await aguardarWidget(tester, find.text('Levítico 1:1'));
+    expect(find.text('Êxodo 1:1'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

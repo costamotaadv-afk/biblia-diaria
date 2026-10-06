@@ -1,0 +1,42 @@
+[
+  {
+    "id": "mat-5-sermao",
+    "tipo": "sermao",
+    "titulo": "O Sermão do Monte",
+    "ref": "Mateus 5",
+    "livro": "Mateus",
+    "tema": ["ensino"],
+    "corpo": "O Sermão do Monte reúne os grandes ensinamentos de Jesus sobre o Reino de Deus. Ele começa com as bem-aventuranças, que declaram bem-vindos justamente os que o mundo costuma esquecer: os humildes, os que choram, os que têm fome de justiça. Não é um código de regras para merecer o amor de Deus, mas o retrato de uma vida transformada por Ele.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Esboços de sermão",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "mat-6-9-nota",
+    "tipo": "nota",
+    "titulo": "O Pai Nosso",
+    "ref": "Mateus 6:9",
+    "livro": "Mateus",
+    "tema": ["oração"],
+    "corpo": "Ao ensinar a orar, Jesus começa pelo essencial: Deus é Pai, e o nome dEle deve ser santificado. As petições seguem uma ordem — primeiro o Reino e a vontade de Deus, depois as necessidades do dia, o perdão e a proteção. É um modelo de simplicidade e confiança, não uma fórmula mecânica.",
+    "fonte": null
+  },
+  {
+    "id": "mat-artigo",
+    "tipo": "artigo",
+    "titulo": "Mateus: o Evangelho do Reino",
+    "ref": "Mateus",
+    "livro": "Mateus",
+    "tema": ["panorama"],
+    "corpo": "O Evangelho de Mateus foi escrito com os olhos voltados para leitores familiarizados com as Escrituras de Israel. Por isso cita tanto o Antigo Testamento e apresenta Jesus como o Messias prometido. O livro alterna narrativas e grandes discursos, mostrando que o Reino anunciado exige uma justiça maior do que a mera aparência religiosa.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  }
+]

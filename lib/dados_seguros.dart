@@ -2,8 +2,11 @@
 ///
 /// A Bíblia é servida por JSON editado manualmente; um campo com tipo errado
 /// (ex.: `capitulos` como objeto em vez de lista) não pode derrubar o app.
-/// Cobre os casos E1/E2/E3/E4/E13/B5 da matriz de QA (tool/QA_EDGE_CASES.md).
+/// Cobre os casos E1–E9, E13, B5 e E16 da matriz de QA
+/// (tool/QA_EDGE_CASES.md).
 library;
+
+import 'leitura_natural.dart';
 
 /// Devolve [valor] se for uma `List`; caso contrário, `null`.
 ///
@@ -111,4 +114,64 @@ Map<String, String> selecionarVersiculoDoDia({
     'referencia': '${livro['nome']} ${cap['numero']}:${versRaw['numero']}',
     'mensagem': mensagem,
   };
+}
+
+/// Converte uma lista bruta de JSON em mapas seguros, descartando itens que
+/// não sejam `Map` (ex.: String/int/null soltos dentro de `capitulos` ou
+/// `versiculos`). Caso E16 — nunca lança `TypeError`.
+List<Map<String, dynamic>> mapasSeguros(List<dynamic>? itens) {
+  if (itens == null) return const [];
+  final mapas = <Map<String, dynamic>>[];
+  for (final item in itens) {
+    if (item is Map) {
+      mapas.add(Map<String, dynamic>.from(item));
+    }
+  }
+  return mapas;
+}
+
+/// Procura o texto de um versículo por referência ("Livro N:M") entre os
+/// livros carregados em cache. Defensivo contra corrupção interna (E16):
+/// capítulos/versículos não-mapeáveis são ignorados; sem correspondência
+/// devolve `null` — a UI converte em "Conteúdo não encontrado." (E14).
+String? textoDeVersiculoEmLivros(
+  Iterable<Map<String, dynamic>> livros,
+  String chave,
+) {
+  for (final livro in livros) {
+    for (final capitulo in mapasSeguros(comoLista(livro['capitulos']))) {
+      for (final versiculo
+          in mapasSeguros(comoLista(capitulo['versiculos']))) {
+        final ref =
+            '${livro['nome']} ${capitulo['numero']}:${versiculo['numero']}';
+        if (ref == chave) return '${versiculo['texto']}';
+      }
+    }
+  }
+  return null;
+}
+
+/// Procura o texto (falado) de um capítulo inteiro — "Versículo N. ..." —
+/// entre os livros carregados em cache. Mesma defensividade de
+/// [textoDeVersiculoEmLivros] (E16): nunca lança; sem correspondência → null.
+String? textoDeCapituloEmLivros(
+  Iterable<Map<String, dynamic>> livros,
+  String chaveCapitulo,
+) {
+  for (final livro in livros) {
+    for (final capitulo in mapasSeguros(comoLista(livro['capitulos']))) {
+      final chave = '${livro['nome']} ${capitulo['numero']}';
+      if (chave != chaveCapitulo) continue;
+      final versiculos = mapasSeguros(comoLista(capitulo['versiculos']));
+      final textos = <String>[];
+      for (final versiculo in versiculos) {
+        textos.add(
+          'Versículo ${numeroPorExtenso('${versiculo['numero']}')}. '
+          '${versiculo['texto']}',
+        );
+      }
+      return textos.join(' ');
+    }
+  }
+  return null;
 }

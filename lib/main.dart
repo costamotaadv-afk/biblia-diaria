@@ -8,12 +8,15 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'cache_estudos.dart';
 import 'cache_livros.dart';
+import 'catalogo_estudos.dart';
 import 'config.dart';
 import 'dados_seguros.dart';
 import 'leitura_natural.dart';
 import 'platform_support.dart';
 import 'widgets/banner_anuncio.dart';
+import 'widgets/painel_estudos.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -180,9 +183,14 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   List<Map<String, dynamic>> _indice = [];
   List<String> _mensagens = [];
   late final CacheDeLivros _cacheLivros;
+  late final CacheDeEstudos _cacheEstudos;
   bool _carregamentoInicial = true;
   Set<String> favoritosVersiculos = {};
   Set<String> favoritosCapitulos = {};
+  Set<String> favoritosEstudos = {};
+  List<RecursoEstudo> _indiceEstudos = [];
+  String? _tipoFiltroEstudos;
+  String _livroFiltroEstudos = '';
   final FlutterTts _tts = FlutterTts();
   bool _falando = false;
   bool _pausado = false;
@@ -203,11 +211,13 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   // evitando race entre memória e disco (caso C4 da matriz de QA).
   Future<void> _escritaFavVersiculos = Future<void>.value();
   Future<void> _escritaFavCapitulos = Future<void>.value();
+  Future<void> _escritaFavEstudos = Future<void>.value();
 
   @override
   void initState() {
     super.initState();
     _cacheLivros = CacheDeLivros(carregador: _carregarLivroMap);
+    _cacheEstudos = CacheDeEstudos(carregador: _carregarEstudosLivro);
     _carregar();
     _configurarTts();
   }
@@ -250,6 +260,15 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       mensagens = [];
     }
 
+    List<RecursoEstudo> indiceEstudos = [];
+    try {
+      final estudosJson =
+          await rootBundle.loadString('assets/data/estudos_indice.json');
+      indiceEstudos = recursosDeJson(json.decode(estudosJson));
+    } catch (_) {
+      indiceEstudos = [];
+    }
+
     // Distribui o conteúdo diário pelos 66 livros sem carregar a Bíblia inteira.
     final diasDecorridos = diasDesdeEpoca(_agora);
     final nomeLivroDoDia = indice.isEmpty
@@ -269,6 +288,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           (prefs.getStringList('favoritos_versiculos') ?? []).toSet();
       favoritosCapitulos =
           (prefs.getStringList('favoritos_capitulos') ?? []).toSet();
+      favoritosEstudos =
+          (prefs.getStringList('favoritos_estudos') ?? []).toSet();
+      _indiceEstudos = indiceEstudos;
       _carregamentoInicial = false;
     });
   }
@@ -285,6 +307,152 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Lê os recursos de estudo de um livro (assets/data/estudos/<nome>.json).
+  /// Livro sem arquivo → lista vazia (cacheada, para não repetir a leitura);
+  /// nunca lança (caso EST1 da matriz de QA).
+  Future<List<RecursoEstudo>?> _carregarEstudosLivro(String livro) async {
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/data/estudos/$livro.json');
+      return recursosDeJson(json.decode(jsonStr));
+    } catch (_) {
+      return const <RecursoEstudo>[];
+    }
+  }
+
+  /// True se há recurso de estudo aplicável a [referencia] naquele [livro].
+  bool _temEstudos(String referencia, String livro) {
+    if (_indiceEstudos.isEmpty) return false;
+    for (final recurso in _indiceEstudos) {
+      if (recurso.livro != livro) continue;
+      if (recursoAplicavel(recurso, referencia, livro: livro)) return true;
+    }
+    return false;
+  }
+
+  /// Recursos aplicáveis a uma referência, carregando o detalhe do livro sob
+  /// demanda (com cache/retry — mesmo padrão de _assegurarLivro).
+  Future<List<RecursoEstudo>> _recursosDe(
+    String referencia,
+    String livro,
+  ) async {
+    if (!_temEstudos(referencia, livro)) return const <RecursoEstudo>[];
+    final lista = await _cacheEstudos.assegurar(livro);
+    if (lista == null) return const <RecursoEstudo>[];
+    return recursosAplicaveis(
+      lista.where((r) => r.livro == livro),
+      referencia,
+      livro: livro,
+    );
+  }
+
+  Future<void> _abrirEstudosDaReferencia(
+    String referencia,
+    String livro,
+  ) async {
+    final recursos = await _recursosDe(referencia, livro);
+    if (!mounted) return;
+    await _mostrarPainelEstudos(recursos, titulo: referencia);
+  }
+
+  Future<void> _abrirRecursoEstudo(RecursoEstudo resumo) async {
+    var recurso = resumo;
+    final lista = await _cacheEstudos.assegurar(resumo.livro);
+    if (lista != null) {
+      for (final item in lista) {
+        if (item.id == resumo.id) {
+          recurso = item;
+          break;
+        }
+      }
+    }
+    if (!mounted) return;
+    final titulo = recurso.titulo.isEmpty
+        ? (resumo.referencia.isEmpty
+            ? rotuloTipo(recurso.tipo)
+            : resumo.referencia)
+        : recurso.titulo;
+    await _mostrarPainelEstudos([recurso], titulo: titulo);
+  }
+
+  Future<void> _mostrarPainelEstudos(
+    List<RecursoEstudo> recursos, {
+    required String titulo,
+  }) async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        titulo,
+                        textAlign: TextAlign.center,
+                        style:
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                      ),
+                      const SizedBox(height: 8),
+                      PainelEstudos(
+                        recursos: recursos,
+                        favoritos: favoritosEstudos,
+                        ttsDisponivel: _ttsDisponivel,
+                        onOuvir: _falarRecurso,
+                        onAlternarFavorito: (recurso) async {
+                          await _toggleFavoritoEstudo(recurso.id);
+                          setSheetState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _falarRecurso(RecursoEstudo recurso) async {
+    final titulo =
+        recurso.titulo.isEmpty ? rotuloTipo(recurso.tipo) : recurso.titulo;
+    final corpo = textoParaLeituraNatural(recurso.corpo);
+    await _iniciarLeitura('$titulo. $corpo');
+  }
+
+  Future<void> _toggleFavoritoEstudo(String id) async {
+    if (!mounted) return;
+    setState(() {
+      if (!favoritosEstudos.remove(id)) {
+        favoritosEstudos.add(id);
+      }
+    });
+    await _persistirFavoritosEstudos();
+  }
+
+  Future<void> _persistirFavoritosEstudos() {
+    final snapshot = favoritosEstudos.toList();
+    _escritaFavEstudos = _escritaFavEstudos.then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('favoritos_estudos', snapshot);
+    });
+    return _escritaFavEstudos;
   }
 
   /// Garante que o livro está no cache; se não, busca e guarda. É chamado
@@ -713,43 +881,16 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     return nome == null ? Future.value() : _assegurarLivro(nome);
   }
 
-  String? _buscarTextoVersiculo(String chave) {
-    for (final livro in _cacheLivros.cache.values) {
-      final capitulos = comoLista(livro['capitulos']) ?? [];
-      for (final capRaw in capitulos) {
-        final cap = capRaw as Map<String, dynamic>;
-        final versiculos = comoLista(cap['versiculos']) ?? [];
-        for (final vRaw in versiculos) {
-          final v = vRaw as Map<String, dynamic>;
-          final ref = '${livro['nome']} ${cap['numero']}:${v['numero']}';
-          if (ref == chave) {
-            return '${v['texto']}';
-          }
-        }
-      }
-    }
-    return null;
-  }
+  /// Busca de texto de versículo delegada aos guardiões puros (E16): itens
+  /// corrompidos dentro das listas não lançam `TypeError`; ausência → null e
+  /// a UI exibe "Conteúdo não encontrado." (E14).
+  String? _buscarTextoVersiculo(String chave) =>
+      textoDeVersiculoEmLivros(_cacheLivros.cache.values, chave);
 
-  String? _buscarTextoCapitulo(String chaveCapitulo) {
-    for (final livro in _cacheLivros.cache.values) {
-      final capitulos = comoLista(livro['capitulos']) ?? [];
-      for (final capRaw in capitulos) {
-        final cap = capRaw as Map<String, dynamic>;
-        final chave = _chaveCapitulo('${livro['nome']}', cap['numero']);
-        if (chave == chaveCapitulo) {
-          final versiculos = comoLista(cap['versiculos']) ?? [];
-          final textos = versiculos.map((v) {
-            final item = v as Map<String, dynamic>;
-            final numPorExtenso = numeroPorExtenso('${item['numero']}');
-            return 'Versículo $numPorExtenso. ${item['texto']}';
-          }).toList();
-          return textos.join(' ');
-        }
-      }
-    }
-    return null;
-  }
+  /// Busca de texto (falado) de capítulo delegada aos guardiões puros (E16),
+  /// com a mesma defensividade de [_buscarTextoVersiculo].
+  String? _buscarTextoCapitulo(String chaveCapitulo) =>
+      textoDeCapituloEmLivros(_cacheLivros.cache.values, chaveCapitulo);
 
   Map<String, String> _conteudoDoDia() {
     if (_carregamentoInicial) return {};
@@ -907,9 +1048,14 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                         size: 24,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Mensagem para você',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      // Texto flexível: em telas estreitas (320 px) ou com fonte
+                      // grande, quebra em vez de estourar o Row (caso B12 de QA).
+                      Expanded(
+                        child: Text(
+                          'Mensagem para você',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
                     ],
                   ),
@@ -944,7 +1090,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => setState(() => aba = 2),
+                  onPressed: () => setState(() => aba = 3),
                   icon: const Icon(Icons.bookmarks_outlined),
                   label: const Text('Salvos'),
                   style: OutlinedButton.styleFrom(
@@ -1051,6 +1197,13 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
+                if (_temEstudos(chaveCapitulo, nomeLivro))
+                  IconButton(
+                    tooltip: 'Estudos do capítulo',
+                    icon: const Icon(Icons.auto_stories_outlined),
+                    onPressed: () =>
+                        _abrirEstudosDaReferencia(chaveCapitulo, nomeLivro),
+                  ),
                 IconButton(
                   tooltip: 'Ouvir capítulo',
                   onPressed: _ttsDisponivel
@@ -1089,6 +1242,13 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
             trailing: Wrap(
               spacing: 2,
               children: [
+                if (_temEstudos(chaveVersiculo, nomeLivro))
+                  IconButton(
+                    tooltip: 'Estudos do versículo',
+                    icon: const Icon(Icons.auto_stories_outlined),
+                    onPressed: () =>
+                        _abrirEstudosDaReferencia(chaveVersiculo, nomeLivro),
+                  ),
                 IconButton(
                   tooltip: 'Ouvir versículo',
                   icon: const Icon(Icons.volume_up),
@@ -1114,13 +1274,139 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     );
   }
 
+  Widget _montarTelaEstudos() {
+    if (_indiceEstudos.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Nenhum recurso de estudo disponível ainda.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final tipos = tiposDisponiveis(_indiceEstudos);
+    final livros = livrosDisponiveis(_indiceEstudos);
+    final filtrados = filtrarRecursos(
+      _indiceEstudos,
+      tipo: _tipoFiltroEstudos,
+      livro: _livroFiltroEstudos.isEmpty ? null : _livroFiltroEstudos,
+    );
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('Todos os tipos'),
+                  selected: _tipoFiltroEstudos == null,
+                  onSelected: (_) => setState(() => _tipoFiltroEstudos = null),
+                ),
+                const SizedBox(width: 8),
+                ...tipos.map(
+                  (tipo) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(rotuloTipo(tipo)),
+                      selected: _tipoFiltroEstudos == tipo,
+                      onSelected: (sel) => setState(
+                        () => _tipoFiltroEstudos = sel ? tipo : null,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: DropdownButtonFormField<String>(
+            initialValue: _livroFiltroEstudos,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Filtrar por livro',
+            ),
+            items: [
+              const DropdownMenuItem<String>(
+                value: '',
+                child: Text('Todos os livros'),
+              ),
+              ...livros.map(
+                (livro) => DropdownMenuItem<String>(
+                  value: livro,
+                  child: Text(livro, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+            ],
+            onChanged: (valor) =>
+                setState(() => _livroFiltroEstudos = valor ?? ''),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: filtrados.isEmpty
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'Nenhum recurso encontrado com esse filtro.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                  itemCount: filtrados.length,
+                  itemBuilder: (context, i) {
+                    final recurso = filtrados[i];
+                    final salvo = favoritosEstudos.contains(recurso.id);
+                    final titulo = recurso.titulo.isEmpty
+                        ? rotuloTipo(recurso.tipo)
+                        : recurso.titulo;
+                    final subtitulo = recurso.referencia.isEmpty
+                        ? rotuloTipo(recurso.tipo)
+                        : '${rotuloTipo(recurso.tipo)} • ${recurso.referencia}';
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: const Icon(Icons.auto_stories_outlined),
+                        title: Text(titulo),
+                        subtitle: Text(subtitulo),
+                        onTap: () => _abrirRecursoEstudo(recurso),
+                        trailing: IconButton(
+                          tooltip: salvo ? 'Remover dos salvos' : 'Salvar',
+                          icon: Icon(
+                            salvo ? Icons.bookmark : Icons.bookmark_border,
+                          ),
+                          onPressed: () => _toggleFavoritoEstudo(recurso.id),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
   Widget _montarTelaSalvos() {
     final listaVersiculos = favoritosVersiculos.toList()..sort();
     final listaCapitulos = favoritosCapitulos.toList()..sort();
+    final listaEstudos = favoritosEstudos.toList()..sort();
 
-    if (listaVersiculos.isEmpty && listaCapitulos.isEmpty) {
+    if (listaVersiculos.isEmpty &&
+        listaCapitulos.isEmpty &&
+        listaEstudos.isEmpty) {
       return const Center(
-        child: Text('Nenhum versículo ou capítulo salvo ainda.'),
+        child: Text('Nenhum versículo, capítulo ou estudo salvo ainda.'),
       );
     }
 
@@ -1229,6 +1515,74 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                 ),
               );
             },
+          );
+        }),
+      );
+    }
+
+    if (listaEstudos.isNotEmpty) {
+      itens.add(const SizedBox(height: 8));
+      itens.add(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Text(
+            'Recursos de estudo salvos',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ),
+      );
+      itens.addAll(
+        listaEstudos.map((id) {
+          RecursoEstudo? resumo;
+          for (final recurso in _indiceEstudos) {
+            if (recurso.id == id) {
+              resumo = recurso;
+              break;
+            }
+          }
+          final encontrado = resumo;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const Icon(
+                Icons.auto_stories_outlined,
+                color: Colors.indigo,
+              ),
+              title: Text(
+                encontrado == null
+                    ? id
+                    : (encontrado.titulo.isEmpty
+                        ? rotuloTipo(encontrado.tipo)
+                        : encontrado.titulo),
+              ),
+              subtitle: encontrado == null
+                  ? const Text('Conteúdo não encontrado.')
+                  : Text(
+                      encontrado.referencia.isEmpty
+                          ? rotuloTipo(encontrado.tipo)
+                          : '${rotuloTipo(encontrado.tipo)} • '
+                              '${encontrado.referencia}',
+                    ),
+              trailing: Wrap(
+                spacing: 2,
+                children: [
+                  IconButton(
+                    tooltip: 'Abrir recurso',
+                    onPressed: encontrado == null
+                        ? null
+                        : () => _abrirRecursoEstudo(encontrado),
+                    icon: const Icon(Icons.open_in_new),
+                  ),
+                  IconButton(
+                    tooltip: 'Remover recurso salvo',
+                    onPressed: () => _toggleFavoritoEstudo(id),
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ],
+              ),
+            ),
           );
         }),
       );
@@ -1634,6 +1988,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     final telas = [
       _montarTelaInicio(conteudo, hoje),
       _montarTelaLeitura(),
+      _montarTelaEstudos(),
       _montarTelaSalvos(),
       _montarTelaAjustes(),
     ];
@@ -1670,6 +2025,11 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book_rounded),
             label: 'Bíblia',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_stories_outlined),
+            selectedIcon: Icon(Icons.auto_stories),
+            label: 'Estudos',
           ),
           NavigationDestination(
             icon: Icon(Icons.bookmarks_outlined),

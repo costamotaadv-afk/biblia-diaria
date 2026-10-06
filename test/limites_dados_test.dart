@@ -114,6 +114,55 @@ void main() {
       expect(r['versiculo'], 'Sem conteúdo bíblico disponível.');
     });
 
+    test('T010/E3: capítulo SORTEADO do dia não-Map → fallback sem crash', () {
+      // dia 66 → (66 ~/ 66) % 2 == 1 → capitulos[1], que é item primitivo
+      // solto no índice (mesmo tipo de corrupção do E3, agora no fluxo diário).
+      final r = selecionarVersiculoDoDia(
+        dia: 66,
+        mensagens: [],
+        livro: <String, dynamic>{
+          'nome': 'Gênesis',
+          'capitulos': <dynamic>[
+            {
+              'numero': 1,
+              'versiculos': <dynamic>[
+                {'numero': 1, 'texto': 'ok'},
+              ],
+            },
+            'corrompido',
+          ],
+        },
+      );
+      expect(r['versiculo'], 'Sem conteúdo bíblico disponível.');
+      expect(r['referencia'], '');
+    });
+
+    test('T012/E4: capítulo sorteado com versículos vazios → fallback e '
+        'referência vazia (botões desabilitados na Home)', () {
+      // dia 66 sorteia capitulos[1] (capítulo 2), cujo versiculos é vazio.
+      final r = selecionarVersiculoDoDia(
+        dia: 66,
+        mensagens: [],
+        livro: <String, dynamic>{
+          'nome': 'Gênesis',
+          'capitulos': <dynamic>[
+            {
+              'numero': 1,
+              'versiculos': <dynamic>[
+                {'numero': 1, 'texto': 'ok'},
+              ],
+            },
+            {'numero': 2, 'versiculos': <dynamic>[]},
+          ],
+        },
+      );
+      expect(r['versiculo'], 'Sem conteúdo bíblico disponível.');
+      // Referência vazia é o contrato que mantém "Ouvir"/"Salvar"
+      // desabilitados na Home (onPressed: null quando referencia.isEmpty).
+      expect(r['referencia'], '');
+      expect(r['mensagem'], isNotEmpty);
+    });
+
     test('B5: ciclo determinístico (livro retorna a cada 66 dias; versículo a cada 132)', () {
       // dia 0: cap (0~/66)%2=0, vers (0~/132)%2=0 → Gênesis 1:1
       expect(

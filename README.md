@@ -41,6 +41,29 @@ no VS Code (ícone de raio com um R).
 Importante: este arquivo já contém a Bíblia completa em português (66 livros,
 de Gênesis a Apocalipse) em domínio público, além das mensagens diárias.
 
+### Como adicionar recursos de estudo
+
+Além dos versículos, o app traz **recursos de estudo** (notas, comentários,
+artigos, sermões, palestras e momentos históricos) ligados a um trecho bíblico.
+Eles ficam em dois lugares:
+
+- `assets/data/estudos_indice.json` — índice leve: lista cada recurso com `id`,
+  `tipo`, `titulo`, `ref` (referência: `"João 3:16"`, `"João 3"` ou `"João"`),
+  `livro` e `tema` (opcional), **sem** o texto.
+- `assets/data/estudos/<Livro>.json` — detalhe por livro: os mesmos campos do
+  índice, mais `corpo` (o texto) e `fonte` (opcional: `autor`, `obra`, `ano`,
+  `licenca`).
+
+Regras para editar:
+
+1. Cada recurso precisa de um `id` único e estável (ex.: `"joao-3-16-comentario-1"`).
+   Recursos sem `id` são ignorados.
+2. O `id` do detalhe deve ser **igual** ao `id` do índice (o índice é a fonte da
+   verdade; o detalhe é quem guarda o `corpo`).
+3. Tipos válidos: `nota`, `comentario`, `artigo`, `sermao`, `palestra`,
+   `momento_historico`. Outros tipos aparecem com um rótulo genérico.
+4. Após editar, salve o arquivo e aperte "Hot Restart" no VS Code.
+
 ## 5. Próximos passos (nesta ordem sugerida)
 
 1. ~~Substituir biblia_exemplo.json pelo texto bíblico completo.~~ ✔ Concluído

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "exo-3-14-nota",
+    "tipo": "nota",
+    "titulo": "EU SOU O QUE SOU",
+    "ref": "Êxodo 3:14",
+    "livro": "Êxodo",
+    "tema": ["nome de Deus"],
+    "corpo": "Quando Moisés pergunta o nome de Deus, a resposta aponta para a própria existência divina: 'EU SOU O QUE SOU'. O nome revela um Deus que é livre, autoexistente e fiel à sua promessa, pronto a agir para libertar o povo. Não é um nome mágico, mas a garantia de que Aquele que fala estará com Moisés.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "exo-20-comentario",
+    "tipo": "comentario",
+    "titulo": "Os Dez Mandamentos",
+    "ref": "Êxodo 20",
+    "livro": "Êxodo",
+    "tema": ["lei", "aliança"],
+    "corpo": "Os Dez Mandamentos são o resumo da aliança entre Deus e Israel. Os primeiros mandamentos tratam do relacionamento com Deus; os demais, do cuidado com o próximo — vida, família, propriedade e verdade. São apresentados dentro do convênio do Sinai, imediatamente após a libertação do Egito: a obediência é resposta à graça, e não o preço dela.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "exo-14-momento",
+    "tipo": "momento_historico",
+    "titulo": "A travessia do mar e a memória do Êxodo",
+    "ref": "Êxodo 14",
+    "livro": "Êxodo",
+    "tema": ["história", "libertação"],
+    "corpo": "A passagem pelo mar tornou-se o grande marco da identidade de Israel, lembrado em cânticos e festas por gerações. Mais do que um episódio de fuga, o texto apresenta o livramento como obra de Deus, que abre caminho onde não há. Anos depois, profetas e salmistas recorreriam a essa imagem para falar de esperança e recomeço.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Contexto histórico",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  }
+]

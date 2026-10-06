@@ -1,7 +1,7 @@
 # 🧪 Matriz de Cenários de Edge Case — Bíblia Diária
 
 **Artefato de QA** — Checklist de regressão e documentação de risco.
-Atualizado em: 2025 (acompanha o código-fonte; revise a cada release).
+Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 
 **Regras de negócio relevantes extraídas do código:**
 - Conteúdo 100% offline via JSON dividido (66 livros, ~13MB), carregado sob demanda com cache em memória (`_livrosCache`) e deduplicação de futures (`_futuresLivros`).
@@ -11,6 +11,7 @@ Atualizado em: 2025 (acompanha o código-fonte; revise a cada release).
 - Tema escuro + fonte grande (textScaler 1.18) para idosos.
 - Pix por e-mail fixo (`costamota@gmail.com`), copiado via Clipboard.
 - AdMob: banner adaptativo só em Android/iOS (IDs de teste atualmente).
+- Recursos de estudo (notas, comentários, artigos, sermões, palestras, momentos históricos) via índice leve + detalhe por livro, com favoritos na chave `favoritos_estudos`.
 
 ---
 
@@ -242,6 +243,46 @@ Atualizado em: 2025 (acompanha o código-fonte; revise a cada release).
 
 ---
 
+## 4️⃣ Recursos de Estudo (catálogo, casamento, filtros)
+
+**EST1. JSON de estudos ausente, vazio ou corrompido**
+- **Input:** `null`, string não-JSON ou `[]` no conteúdo de `assets/data/estudos_indice.json` / `assets/data/estudos/<Livro>.json`.
+- **Esperado:** `recursosDeJson` devolve `[]` (catálogo vazio); painel mostra estado vazio amigável; sem `TypeError` nem crash.
+- **Impacto se falhar:** deploy com arquivo truncado/corrompido derrubaria a aba Estudos e o indicador de estudo na leitura.
+- **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart` (entrada não-lista → catálogo vazio).
+
+**EST2. Item não-`Map`, `id` vazio ou tipos errados são ignorados**
+- **Input:** itens como `"texto"`, `42`, `null`, map sem `id`/com `id` vazio, ou `tipo`/`titulo`/`tema`/`fonte` com tipo errado.
+- **Esperado:** parsing descarta os inválidos e mantém os válidos; tipos errados viram `''`/`[]`/`null` sem lançar (`recursoDeMapa`/`recursosDeJson`).
+- **Impacto se falhar:** um único item malformado quebraria o catálogo inteiro (crash em tela) em vez de ser descartado.
+- **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
+
+**EST3. Casamento de referência versículo/capítulo/livro (com prefixo numérico)**
+- **Input:** recurso com `ref` de versículo (`"João 3:16"`), capítulo (`"João 3"`) ou livro (`"João"`), contra o alvo `"João 3:16"`; também `"1 João 4:8"`.
+- **Esperado:** `recursoAplicavel`/`recursosAplicaveis` devolvem o recurso de versículo mais os de capítulo e de livro (herança); `capituloDaReferencia` extrai `"João 3"` apenas de versículos; o prefixo numérico não confunde o casamento.
+- **Impacto se falhar:** recurso de capítulo/livro não apareceria nos versículos, ou `"1 João"` casaria errado — perda de contexto de estudo.
+- **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
+
+**EST4. Corpo vazio ou só espaços → sem conteúdo**
+- **Input:** recurso com `corpo: "   "` (ou fonte parcial).
+- **Esperado:** `temCorpo == false`; painel mostra mensagem amigável em vez de corpo vazio; crédito de fonte montado apenas com os campos existentes.
+- **Impacto se falhar:** recurso "fantasma" sem texto renderizaria em branco e enganaria o usuário.
+- **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
+
+**EST5. Agrupamento e filtros determinísticos (tipo/livro)**
+- **Input:** catálogo com tipos conhecidos e desconhecidos, e vários livros.
+- **Esperado:** `agruparPorTipo` põe os tipos conhecidos primeiro (ordem da tabela) e os demais ao final (ordem de aparição); `filtrarRecursos`/`tiposDisponiveis`/`livrosDisponiveis` são estáveis (livros em ordem alfabética).
+- **Impacto se falhar:** a ordem da biblioteca mudaria a cada build → UX inconsistente e testes frágeis (NFR-007).
+- **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
+
+**EST6. Rótulo genérico para tipo desconhecido**
+- **Input:** `tipo: "devocional"` (fora de `tiposConhecidos`) ou `""`.
+- **Esperado:** `rotuloTipo` capitaliza o desconhecido (`"Devocional"`) e usa `"Estudo"` para vazio; tipos conhecidos têm rótulo fixo (`"Sermão"`, `"Momento histórico"`).
+- **Impacto se falhar:** tipo desconhecido exibiria a chave técnica (`"momento_historico"`) em vez de um rótulo legível.
+- **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
+
+---
+
 ## 📊 Resumo de prioridade (o que testar primeiro)
 
 | Severidade | Caso | Tipo | Status |
@@ -256,8 +297,9 @@ Atualizado em: 2025 (acompanha o código-fonte; revise a cada release).
 | 🟠 Média | E15 / C6 — Estresse de favoritos e livros expandidos | Estresse | ⏳ Pendente |
 | 🟡 Baixa | B4, C8 — Virada do dia, rotação | Diversos | ⏳ Pendente |
 | 🟡 Baixa | E1–E4, E13, B5, B7, C9 | Dados/Plataforma | ✅ Corrigido + testado |
+| 🟡 Baixa | EST1–EST6 — Recursos de estudo (parsing/casamento/filtros) | Dados | ✅ Coberto + testado |
 
-**Cobertura automatizada atual:** `test/edge_cases_e10_test.dart`, `test/concurrency_c4_test.dart`, `test/platform_c10_c11_test.dart`, `test/clipboard_b2_test.dart`, `test/tts_qualidade_test.dart`, `test/limites_dados_test.dart`, `test/banner_c9_test.dart`.
+**Cobertura automatizada atual:** `test/edge_cases_e10_test.dart`, `test/concurrency_c4_test.dart`, `test/platform_c10_c11_test.dart`, `test/clipboard_b2_test.dart`, `test/tts_qualidade_test.dart`, `test/limites_dados_test.dart`, `test/banner_c9_test.dart`, `test/catalogo_estudos_test.dart`.
 
 > **Refatoração para testabilidade (E1–E4, E13, B5):** a lógica de seleção do versículo do dia e os casts de JSON foram extraídos para funções puras em `lib/dados_seguros.dart` (`diasDesdeEpoca`, `comoLista`, `selecionarVersiculoDoDia`), permitindo teste unitário determinístico sem widget.
 

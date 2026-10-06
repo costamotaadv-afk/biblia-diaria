@@ -1,0 +1,32 @@
+[
+  {
+    "id": "apoc-1-palestra",
+    "tipo": "palestra",
+    "titulo": "Palestra: ler Apocalipse hoje",
+    "ref": "Apocalipse 1",
+    "livro": "Apocalipse",
+    "tema": ["esperança"],
+    "corpo": "O livro de Apocalipse muitas vezes assusta leitores por causa das imagens de juízo. Vale lembrar que ele é, antes de tudo, uma carta pastoral escrita a comunidades que sofriam. Seu propósito é fortalecer a fé e a esperança, mostrando que o Cordeiro venceu e que Deus tem a última palavra. Roteiro: (1) gênero e contexto; (2) as visões e seus símbolos; (3) a mensagem de consolo; (4) a esperança final.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Roteiros de palestra",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "apoc-21-comentario",
+    "tipo": "comentario",
+    "titulo": "Novo céu e nova terra",
+    "ref": "Apocalipse 21",
+    "livro": "Apocalipse",
+    "tema": ["esperança"],
+    "corpo": "Os capítulos finais apresentam a renovação de todas as coisas: não a fuga da criação, mas a cura dela. A imagem da nova Jerusalém, cidade santa, fala de comunhão completa com Deus, onde já não há morte, luto, choro ou dor. É a resposta definitiva ao mal e o horizonte de esperança para quem sofre.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  }
+]

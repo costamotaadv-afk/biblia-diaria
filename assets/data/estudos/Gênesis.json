@@ -1,0 +1,62 @@
+[
+  {
+    "id": "gen-1-1-nota",
+    "tipo": "nota",
+    "titulo": "No princípio",
+    "ref": "Gênesis 1:1",
+    "livro": "Gênesis",
+    "tema": ["criação", "origem"],
+    "corpo": "A expressão 'no princípio' abre não apenas o primeiro livro, mas toda a narrativa bíblica. Ela situa Deus como aquele que existe antes de tudo e que dá origem ao tempo, ao espaço e à vida. Diferente de relatos antigos em que os deuses surgem dentro da própria natureza, aqui o Criador está acima da criação — e é Ele quem ordena o que antes era informe e vazio.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "gen-1-comentario",
+    "tipo": "comentario",
+    "titulo": "A criação e o valor da vida",
+    "ref": "Gênesis 1",
+    "livro": "Gênesis",
+    "tema": ["criação"],
+    "corpo": "O capítulo apresenta a criação em uma sequência ritmada, marcada pela fórmula 'e disse Deus... e assim foi'. Cada etapa recebe a avaliação de que era boa. O ponto alto é a criação do ser humano à imagem e semelhança de Deus, fundamento da dignidade de toda pessoa. O descanso do sétimo dia não é um detalhe: faz parte da ordem criada e convida a confiar no Criador.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "gen-12-momento",
+    "tipo": "momento_historico",
+    "titulo": "Abraão e as rotas do antigo Oriente",
+    "ref": "Gênesis 12",
+    "livro": "Gênesis",
+    "tema": ["história", "patriarcas"],
+    "corpo": "No segundo milênio antes de Cristo, a região entre o Eufrates e o Mediterrâneo era cruzada por rotas comerciais e habitada por cidades-estado, pastores e tribos em aliança. O chamado de Abraão para deixar sua terra e caminhar rumo a Canaã insere-se nesse mundo concreto. A promessa de uma terra e de uma grande descendência formaria a identidade de Israel por muitos séculos.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Contexto histórico",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "gen-artigo",
+    "tipo": "artigo",
+    "titulo": "Panorama do livro de Gênesis",
+    "ref": "Gênesis",
+    "livro": "Gênesis",
+    "tema": ["panorama"],
+    "corpo": "Gênesis trata de começos: do mundo, da humanidade, do pecado e do juízo, mas também da promessa que reabre o futuro. A obra se divide em duas grandes partes: os capítulos 1 a 11, sobre as origens de todos os povos, e os capítulos 12 a 50, centrados na família de Abraão, Isaque, Jacó e José. Ler o livro como um todo ajuda a enxergar como a fidelidade de Deus atravessa gerações — inclusive através das falhas humanas.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  }
+]

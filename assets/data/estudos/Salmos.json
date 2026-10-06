@@ -1,0 +1,62 @@
+[
+  {
+    "id": "sal-23-comentario",
+    "tipo": "comentario",
+    "titulo": "O Senhor é o meu pastor",
+    "ref": "Salmos 23",
+    "livro": "Salmos",
+    "tema": ["confiança"],
+    "corpo": "A imagem do pastor descreve cuidado, provisão e direção. No antigo Israel, o pastor caminhava à frente do rebanho, conhecia cada ovelha e a defendia dos perigos. O salmo não promete ausência de dificuldades — fala de passar por vales escuros — mas promete a presença constante de Deus. Por isso o texto termina em confiança, e não em temor.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "sal-23-4-nota",
+    "tipo": "nota",
+    "titulo": "Vale da sombra da morte",
+    "ref": "Salmos 23:4",
+    "livro": "Salmos",
+    "tema": ["consolo"],
+    "corpo": "A expressão hebraica sugere um vale profundo e sombrio, lugar de risco para o viajante. Observa-se uma mudança importante: até o versículo 3 fala-se de Deus na terceira pessoa ('Ele me faz repousar'); a partir daqui, o salmista passa a falar diretamente ('tu estás comigo'). A proximidade do momento difícil muda o modo de orar.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "sal-artigo",
+    "tipo": "artigo",
+    "titulo": "Panorama do Saltério",
+    "ref": "Salmos",
+    "livro": "Salmos",
+    "tema": ["panorama", "poesia"],
+    "corpo": "Os Salmos são a coleção de orações e cânticos de Israel, reunidos em cinco livros. Há louvores, súplicas, ações de graças, lamentos e reflexões sobre a lei. A poesia hebraica não rima: organiza-se em paralelismos, em que um verso ecoa ou complementa o anterior. Essa estrutura ajuda a ler cada salmo como uma oração que dá voz tanto à alegria quanto à dor.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "sal-119-momento",
+    "tipo": "momento_historico",
+    "titulo": "A Torá e a poesia acróstica",
+    "ref": "Salmos 119",
+    "livro": "Salmos",
+    "tema": ["história", "lei"],
+    "corpo": "O Salmo 119 é o mais longo dos Salmos e foi composto como um poema acróstico: cada bloco de versos começa, em sequência, com uma letra do alfabeto hebraico. O tema central é a Torá, a instrução de Deus. Esse recurso literário servia como auxílio de memorização e reforçava a ideia de que a lei deve ser aprendida de fio a pavio, de 'alef' a 'tau'.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Contexto histórico",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  }
+]
