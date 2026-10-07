@@ -55,3 +55,6 @@ android/key.properties
 *.jks
 *.keystore
 
+
+# Projeto separado (nao faz parte deste repositorio)
+meu-novo-projeto/
