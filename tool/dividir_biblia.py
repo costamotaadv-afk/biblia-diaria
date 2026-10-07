@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Divide assets/data/biblia.json (13MB, um arquivo só) em vários arquivos
+Divide a fonte canônica da Bíblia (um arquivo só, ~13 MB) em vários arquivos
 menores para carregamento sob demanda na web e otimização no Android.
+
+Fonte (canônica): `tool/backup/biblia.json.gz` — versão compactada (padrão,
+para não ocupar ~13 MB no repositório). Se preferir manter descompactada, use
+`tool/backup/biblia.json` (o script prioriza o `.gz` e cai para o `.json`).
 
 Saídas (tudo em `assets/data/`):
   - indice.json         -> lista de livros (nome + nº capítulos) p/ navegação rápida
@@ -10,16 +14,27 @@ Saídas (tudo em `assets/data/`):
 
 Uso: python tool/dividir_biblia.py
 """
+import gzip
 import json
 import os
 
-SRC = os.path.join("assets", "data", "biblia.json")
+SRC_DIR = os.path.join("tool", "backup")
+SRC_GZ = os.path.join(SRC_DIR, "biblia.json.gz")
+SRC_PLAIN = os.path.join(SRC_DIR, "biblia.json")
 OUT_DIR = os.path.join("assets", "data")
 LIVROS_DIR = os.path.join(OUT_DIR, "livros")
 
+
+def _carregar_dados():
+    if os.path.exists(SRC_GZ):
+        with gzip.open(SRC_GZ, "rt", encoding="utf-8-sig") as f:
+            return json.load(f)
+    with open(SRC_PLAIN, encoding="utf-8-sig") as f:
+        return json.load(f)
+
+
 def main():
-    with open(SRC, encoding="utf-8-sig") as f:
-        dados = json.load(f)
+    dados = _carregar_dados()
 
     livros = dados.get("livros", [])
     mensagens = dados.get("mensagens", []) or dados.get("mensagens_dia", [])

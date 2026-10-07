@@ -33,13 +33,18 @@ desenvolvedor) OU abra um emulador pelo Android Studio.
 
 ## 4. Como editar o conteúdo (versículos e mensagens)
 
-Abra o arquivo assets/data/biblia.json. Ele é só texto — você pode adicionar,
-remover ou ajustar livros, capítulos, versículos e mensagens seguindo o mesmo
-formato que já está lá. Depois de editar, salve o arquivo e aperte "Hot Restart"
-no VS Code (ícone de raio com um R).
+O texto bíblico e as mensagens ficam compactados em `tool/backup/biblia.json.gz`
+(a versão .gz existe só para não ocupar ~13 MB no repositório). Para editar e
+regenerar os arquivos que o app lê:
 
-Importante: este arquivo já contém a Bíblia completa em português (66 livros,
-de Gênesis a Apocalipse) em domínio público, além das mensagens diárias.
+1. Descompacte `tool/backup/biblia.json.gz` (ou abra em um editor que leia .gz)
+   e ajuste livros, capítulos, versículos e mensagens no mesmo formato.
+2. Rode `python tool/dividir_biblia.py` — ele gera `assets/data/indice.json`,
+   `assets/data/mensagens.json` e `assets/data/livros/<Livro>.json`.
+3. Salve e aperte "Hot Restart" no VS Code (ícone de raio com um R).
+
+Importante: a fonte contém a Bíblia completa em português (66 livros, de
+Gênesis a Apocalipse) em domínio público, além das mensagens diárias.
 
 ### Como adicionar recursos de estudo
 
@@ -102,13 +107,12 @@ google_mobile_ads para inserir um banner.
    ✔ Concluído — o ícone (livro com coração, fundo índigo) foi gerado para
    Android e o tema recebeu uma paleta com destaque dourado e tipografia mais
    legível. A imagem-base fica em assets/icon/app_icon.png.
-5. Gerar o build final:
-   flutter build appbundle   (para Google Play e Galaxy Store)
-   flutter build ipa         (para App Store — precisa de Mac)
-   ⏸️ Aguardando: ainda não foi gerado porque o Android SDK não está instalado
-   nesta máquina. Instale o Android Studio (https://developer.android.com/studio)
-   e ele instalará o Android SDK no primeiro uso. Depois, na pasta do projeto,
-   rode: flutter build appbundle
+5. Gerar o build final (otimizado em tamanho):
+   powershell -ExecutionPolicy Bypass -File tool/build_release.ps1
+   Isso gera o App Bundle (Google Play/Galaxy Store) e os APKs separados por
+   arquitetura (instalação direta), com ofuscação e símbolos em build/symbols/.
+   Baixando só a arquitetura certa, o APK cai de ~53 MB para ~21 MB sem perder
+   nenhuma funcionalidade. (Para iOS, use `flutter build ipa` em um Mac.)
 
 ## 6. Configuração do AdMob (Etapa 2)
 
