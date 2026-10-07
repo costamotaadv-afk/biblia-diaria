@@ -10,9 +10,14 @@ Modelo:
 
 - `class RecursoEstudo`
   - `String id`, `String tipo`, `String titulo`, `String corpo`,
-    `String referencia`, `String livro`, `List<String> temas`, `FonteEstudo? fonte`.
+    `String referencia`, `String livro`, `List<String> temas`, `String periodo`,
+    `List<String> fatos`, `FonteEstudo? fonte`.
+  - `String periodo`/`List<String> fatos` são **opcionais** (default `''`/`[]`),
+    usados sobretudo em recursos `momento_historico` (contexto histórico).
   - `bool get temCorpo` — corpo não vazio após `trim()`.
   - `bool get temFonte` — `fonte` presente e com ao menos um campo.
+  - `bool get temPeriodo` — `periodo` não vazio após `trim()`.
+  - `bool get temFatos` — `fatos` não vazio.
 - `class FonteEstudo`
   - `String autor`, `String obra`, `String ano`, `String licenca`.
   - `String get credito` — monta o crédito com os campos existentes (vazio se
@@ -61,8 +66,9 @@ Filtros (biblioteca):
     `void Function(RecursoEstudo) onAlternarFavorito`, `void Function(RecursoEstudo)?
     onOuvir`, `bool ttsDisponivel`.
   - Renderiza: estados vazio e preenchido; recursos agrupados por tipo; corpo,
-    crédito de fonte e ações (Salvar/Remover, Ouvir). Nunca lança; usa `Semantics`
-    nos controles.
+    crédito de fonte e ações (Salvar/Remover, Ouvir). Para `momento_historico`
+    com `periodo`/`fatos`, renderiza o selo do período e a lista de tópicos
+    históricos/arqueológicos. Nunca lança; usa `Semantics` nos controles.
 
 ## Storage (delta de `contracts/storage.md`)
 
@@ -85,3 +91,5 @@ ignorados no parsing.
 | EST4 | Corpo vazio/só espaços → `temCorpo == false` | `test/catalogo_estudos_test.dart` |
 | EST5 | Agrupamento e filtros determinísticos (tipo/livro) | `test/catalogo_estudos_test.dart` |
 | EST6 | Rótulo genérico para tipo desconhecido | `test/catalogo_estudos_test.dart` |
+| EST7 | Busca por palavra-chave (ignora caixa/acentos) | `test/catalogo_estudos_test.dart` |
+| EST8 | `periodo`/`fatos` do momento histórico (parse/fallback) | `test/catalogo_estudos_test.dart` |

@@ -215,4 +215,47 @@ void main() {
       expect(filtrarPorBusca(recursos, 'inexistente'), isEmpty);
     });
   });
+  group('contexto histórico: periodo e fatos (EST8)', () {
+    test('periodo e fatos são parseados; ausentes viram padrão', () {
+      final comContexto = recursosDeJson([
+        {
+          'id': 'a',
+          'tipo': 'momento_historico',
+          'periodo': 'Novo Império Egípcio (c. 1550–1069 a.C.)',
+          'fatos': ['Fato um', 'Fato dois'],
+        },
+      ]).single;
+      expect(comContexto.temPeriodo, isTrue);
+      expect(comContexto.periodo, 'Novo Império Egípcio (c. 1550–1069 a.C.)');
+      expect(comContexto.temFatos, isTrue);
+      expect(comContexto.fatos, ['Fato um', 'Fato dois']);
+
+      final semContexto = recursosDeJson([
+        {'id': 'b', 'tipo': 'nota'},
+      ]).single;
+      expect(semContexto.temPeriodo, isFalse);
+      expect(semContexto.periodo, isEmpty);
+      expect(semContexto.temFatos, isFalse);
+      expect(semContexto.fatos, isEmpty);
+    });
+
+    test('periodo/fatos ausentes ou vazios não lançam e viram padrão', () {
+      final recurso = recursosDeJson([
+        {'id': 'a', 'periodo': null, 'fatos': 'não-lista'},
+      ]).single;
+      expect(recurso.temPeriodo, isFalse);
+      expect(recurso.periodo, isEmpty);
+      expect(recurso.temFatos, isFalse);
+      expect(recurso.fatos, isEmpty);
+    });
+
+    test('periodo só com espaços é ausente; fatos filtram vazios', () {
+      final recurso = recursosDeJson([
+        {'id': 'a', 'periodo': '   ', 'fatos': [' ', 'ok', '  ']},
+      ]).single;
+      expect(recurso.temPeriodo, isFalse);
+      expect(recurso.fatos, ['ok']);
+    });
+  });
+
 }

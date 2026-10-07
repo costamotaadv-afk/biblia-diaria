@@ -67,7 +67,8 @@ Carregamento sob demanda com retry.
 Lógica pura dos recursos de estudo (sem I/O nem Flutter).
 
 - `class RecursoEstudo` — `id`, `tipo`, `titulo`, `corpo`, `referencia`, `livro`,
-  `temas`, `fonte`; getters `temCorpo`, `temFonte`.
+  `temas`, `periodo`, `fatos`, `fonte`; getters `temCorpo`, `temFonte`,
+  `temPeriodo`, `temFatos`.
 - `class FonteEstudo` — `autor`, `obra`, `ano`, `licenca`; getters `vazio`,
   `credito` (monta a atribuição legível).
 - `List<RecursoEstudo> recursosDeJson(dynamic)` — parsing defensivo (EST1/EST2).

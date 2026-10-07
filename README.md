@@ -64,6 +64,29 @@ Regras para editar:
    `momento_historico`. Outros tipos aparecem com um rótulo genérico.
 4. Após editar, salve o arquivo e aperte "Hot Restart" no VS Code.
 
+### Como adicionar contexto histórico
+
+Os "momentos históricos" (`tipo: "momento_historico"`) também aceitam dois
+campos opcionais que enriquecem a leitura:
+
+- `periodo` — o período histórico/arqueológico (ex.: `"Novo Império Egípcio
+  (c. 1550–1069 a.C.)"`).
+- `fatos` — lista de fatos arqueológicos/históricos em tópicos.
+
+No índice (`estudos_indice.json`), mantenha apenas `id`, `tipo`, `titulo`, `ref`,
+`livro` e `tema` (sem `periodo`/`fatos`/`corpo`). No detalhe
+(`estudos/<Livro>.json`), adicione `periodo` e/ou `fatos` junto do `corpo`. O app
+exibe esses campos com um selo de período e uma lista de tópicos, e os inclui na
+leitura em voz alta ("Ouvir").
+
+Conteúdo histórico exige curadoria e crédito de fonte (`fonte`): não invente
+fatos — revise cada afirmação antes de publicar. Para conferir a consistência
+dos dados antes de rodar o app:
+
+```powershell
+python tool/validar_estudos.py
+```
+
 ## 5. Próximos passos (nesta ordem sugerida)
 
 1. ~~Substituir biblia_exemplo.json pelo texto bíblico completo.~~ ✔ Concluído

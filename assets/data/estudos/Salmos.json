@@ -51,6 +51,12 @@
     "ref": "Salmos 119",
     "livro": "Salmos",
     "tema": ["história", "lei"],
+    "periodo": "Período pós-exílico (c. 500–300 a.C.), época de coleção e meditação sobre a Torá",
+    "fatos": [
+      "O Salmo 119 é um acróstico alfabético: vinte e duas estrofes, uma para cada letra do alfabeto hebraico.",
+      "Poemas acrósticos eram usados no antigo Oriente como técnica de memorização e de meditação exaustiva sobre um tema.",
+      "O termo hebraico 'torá' aqui significa instrução e ensino, não apenas leis, e orienta toda a vida do crente."
+    ],
     "corpo": "O Salmo 119 é o mais longo dos Salmos e foi composto como um poema acróstico: cada bloco de versos começa, em sequência, com uma letra do alfabeto hebraico. O tema central é a Torá, a instrução de Deus. Esse recurso literário servia como auxílio de memorização e reforçava a ideia de que a lei deve ser aprendida de fio a pavio, de 'alef' a 'tau'.",
     "fonte": {
       "autor": "Curadoria Bíblia Diária",

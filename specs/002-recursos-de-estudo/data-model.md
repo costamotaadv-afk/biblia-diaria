@@ -19,11 +19,15 @@ Material de apoio à compreensão de um texto bíblico.
     aplicável a trechos (só aparece na biblioteca).
   - `livro` (String) — livro dono do arquivo; usado para casar e carregar.
   - `tema` (List<String>) — opcional; assuntos/palavras-chave.
+  - `periodo` (String) — opcional; período histórico/arqueológico (usado
+    sobretudo em `momento_historico`).
+  - `fatos` (List<String>) — opcional; fatos históricos/arqueológicos em tópicos.
   - `fonte` (Map) — opcional: `autor`, `obra`, `ano`, `licenca`.
 - **Validação**: texto de `corpo` só com espaços → tratado como sem conteúdo;
   `tipo` desconhecido → rótulo genérico legível; `fonte` parcial → crédito
-  montado apenas com os campos existentes; `ref`/`livro` ausentes → recurso sem
-  associação a trecho (nunca crash).
+  montado apenas com os campos existentes; `periodo`/`fatos` ausentes, vazios ou
+  com tipos errados → `''`/`[]` (nunca `TypeError`); `ref`/`livro` ausentes →
+  recurso sem associação a trecho (nunca crash).
 
 ### Tipos de Recurso
 Categoria estável (extensível apenas por dados):

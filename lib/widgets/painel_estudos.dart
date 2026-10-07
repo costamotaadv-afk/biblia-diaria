@@ -106,11 +106,16 @@ class PainelEstudos extends StatelessWidget {
                   ),
                 ),
               ],
+              if (recurso.temPeriodo) ...[
+                const SizedBox(height: 8),
+                _seloPeriodo(context, recurso.periodo),
+              ],
               const SizedBox(height: 8),
               Text(
                 recurso.temCorpo ? recurso.corpo : 'Conteúdo não disponível.',
                 style: const TextStyle(fontSize: 16, height: 1.5),
               ),
+              if (recurso.temFatos) _blocoFatos(context, recurso.fatos),
               if (credito.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -138,6 +143,64 @@ class PainelEstudos extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Selo discreto do período histórico/arqueológico (momento histórico).
+  Widget _seloPeriodo(BuildContext context, String periodo) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.history_edu,
+          size: 18,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            periodo,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Lista de fatos históricos/arqueológicos em tópicos legíveis.
+  Widget _blocoFatos(BuildContext context, List<String> fatos) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+        Text(
+          'Fatos que iluminam o texto',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 4),
+        for (final fato in fatos)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('•', style: TextStyle(fontSize: 16, height: 1.5)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    fato,
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

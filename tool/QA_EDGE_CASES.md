@@ -296,6 +296,12 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
   a busca seria frágil (diferenciação de acento/caixa) — UX ruim na biblioteca.
 - **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
 
+**EST8. Contexto histórico (periodo/fatos) de um momento histórico**
+- **Input:** recurso `momento_historico` com `periodo` e `fatos` presentes, ausentes, vazios ou com tipos errados.
+- **Esperado:** `recursoDeMapa` parseia `periodo` (string) e `fatos` (lista de strings não vazias); ausentes/vazios viram `''`/`[]` (`temPeriodo`/`temFatos` falsos); o painel mostra selo de período e tópicos sem overflow em 320 px; o "Ouvir" inclui o contexto.
+- **Impacto se falhar:** o contexto histórico sumiria, ou um campo malformado derrubaria o painel (SC-004) e a leitura em voz alta omitiria o período/fatos.
+- **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
+
 **EST6. Rótulo genérico para tipo desconhecido**
 - **Input:** `tipo: "devocional"` (fora de `tiposConhecidos`) ou `""`.
 - **Esperado:** `rotuloTipo` capitaliza o desconhecido (`"Devocional"`) e usa `"Estudo"` para vazio; tipos conhecidos têm rótulo fixo (`"Sermão"`, `"Momento histórico"`).
@@ -319,7 +325,7 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 | 🟠 Média | C6 — Estresse de livros expandidos (memória/estado) | Estresse | ✅ Corrigido + testado |
 | 🟡 Baixa | B4, C8 — Virada do dia, rotação | Diversos | ✅ Corrigido + testado |
 | 🟡 Baixa | E1–E4, E13, B5, B7, C9 | Dados/Plataforma | ✅ Corrigido + testado |
-| 🟡 Baixa | EST1–EST6 — Recursos de estudo (parsing/casamento/filtros) | Dados | ✅ Coberto + testado |
+| 🟡 Baixa | EST1–EST8 — Recursos de estudo (parsing/casamento/filtros/contexto histórico) | Dados | ✅ Coberto + testado |
 
 **Cobertura automatizada atual:** `test/edge_cases_e10_test.dart`, `test/concurrency_c4_test.dart`, `test/platform_c10_c11_test.dart`, `test/clipboard_b2_test.dart`, `test/tts_qualidade_test.dart`, `test/limites_dados_test.dart`, `test/dados_biblicos_test.dart`, `test/config_negocio_test.dart`, `test/banner_c9_test.dart`, `test/banner_timeout_c9_test.dart`, `test/rotacao_c8_test.dart`, `test/catalogo_estudos_test.dart`, `test/cache_livros_test.dart`, `test/estresse_c6_test.dart`, `test/estresse_e15_test.dart`, `test/robustez_e16_test.dart`, `test/troca_aba_c7_test.dart`, `test/tts_concorrencia_test.dart`, `test/tts_retomada_c12_test.dart`, `test/overflow_b12_test.dart`, `test/virada_dia_b4_test.dart`, `test/widget_test.dart`.
 

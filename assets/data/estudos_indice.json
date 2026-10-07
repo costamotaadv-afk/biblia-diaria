@@ -16,6 +16,8 @@
   {"id": "mat-artigo", "tipo": "artigo", "titulo": "Mateus: o Evangelho do Reino", "ref": "Mateus", "livro": "Mateus", "tema": ["panorama"]},
   {"id": "exo-3-14-nota", "tipo": "nota", "titulo": "EU SOU O QUE SOU", "ref": "Êxodo 3:14", "livro": "Êxodo", "tema": ["nome de Deus"]},
   {"id": "exo-20-comentario", "tipo": "comentario", "titulo": "Os Dez Mandamentos", "ref": "Êxodo 20", "livro": "Êxodo", "tema": ["lei", "aliança"]},
+  {"id": "exo-1-momento", "tipo": "momento_historico", "titulo": "O Egito e a opressão dos hebreus", "ref": "Êxodo 1", "livro": "Êxodo", "tema": ["história", "opressão"]},
+
   {"id": "exo-14-momento", "tipo": "momento_historico", "titulo": "A travessia do mar e a memória do Êxodo", "ref": "Êxodo 14", "livro": "Êxodo", "tema": ["história", "libertação"]},
   {"id": "apoc-1-palestra", "tipo": "palestra", "titulo": "Palestra: ler Apocalipse hoje", "ref": "Apocalipse 1", "livro": "Apocalipse", "tema": ["esperança"]},
   {"id": "apoc-21-comentario", "tipo": "comentario", "titulo": "Novo céu e nova terra", "ref": "Apocalipse 21", "livro": "Apocalipse", "tema": ["esperança"]}

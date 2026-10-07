@@ -446,7 +446,17 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     final titulo =
         recurso.titulo.isEmpty ? rotuloTipo(recurso.tipo) : recurso.titulo;
     final corpo = textoParaLeituraNatural(recurso.corpo);
-    await _iniciarLeitura('$titulo. $corpo');
+    final periodo = recurso.temPeriodo
+        ? textoParaLeituraNatural(recurso.periodo)
+        : '';
+    final fatos = recurso.fatos.map(textoParaLeituraNatural).join(' ');
+    final partes = <String>[
+      titulo,
+      if (periodo.isNotEmpty) 'Período histórico: $periodo',
+      if (corpo.isNotEmpty) corpo,
+      if (fatos.isNotEmpty) 'Fatos que iluminam o texto: $fatos',
+    ];
+    await _iniciarLeitura(partes.join('. '));
   }
 
   Future<void> _toggleFavoritoEstudo(String id) async {

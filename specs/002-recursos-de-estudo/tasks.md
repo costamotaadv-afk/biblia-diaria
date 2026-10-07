@@ -128,3 +128,17 @@ módulo puro; a suíte existente deve permanecer verde.
       e temas) + campo de busca na aba "Estudos" (`lib/main.dart`) + caso **EST7**
       na matriz e testes em `test/catalogo_estudos_test.dart`.
 
+---
+
+## Evolução pós-MVP — US2: Contexto histórico estruturado (Priority: P2)
+
+- [x] T018 [US2] Enriquecer `momento_historico` com campos opcionais `periodo`
+      (string) e `fatos` (lista de tópicos): modelo + parsing defensivo em
+      `lib/catalogo_estudos.dart`; render dedicado (selo de período + tópicos)
+      em `lib/widgets/painel_estudos.dart`; inclusão do contexto na leitura em
+      voz alta (`_falarRecurso` em `lib/main.dart`); caso **EST8** na matriz e
+      testes em `test/catalogo_estudos_test.dart`.
+- [x] T019 [P] Dados: enriquecer os 3 `momento_historico` existentes (Gênesis 12,
+      Êxodo 14, Salmos 119) com `periodo`/`fatos` e adicionar `Êxodo 1` (índice +
+      detalhe); ferramenta de validação `tool/validar_estudos.py`.
+

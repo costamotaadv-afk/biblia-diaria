@@ -72,6 +72,13 @@ class RecursoEstudo {
   /// Assuntos/palavras-chave (opcional).
   final List<String> temas;
 
+  /// Período histórico/arqueológico associado (opcional; usado sobretudo em
+  /// recursos do tipo `momento_historico`). Ex.: "Novo Império Egípcio…".
+  final String periodo;
+
+  /// Fatos históricos/arqueológicos em tópicos (opcional).
+  final List<String> fatos;
+
   /// Fonte/atribuição (opcional).
   final FonteEstudo? fonte;
 
@@ -83,12 +90,18 @@ class RecursoEstudo {
     required this.referencia,
     required this.livro,
     this.temas = const <String>[],
+    this.periodo = '',
+    this.fatos = const <String>[],
     this.fonte,
   });
 
   bool get temCorpo => corpo.trim().isNotEmpty;
 
   bool get temFonte => fonte != null && !fonte!.vazio;
+
+  bool get temPeriodo => periodo.trim().isNotEmpty;
+
+  bool get temFatos => fatos.isNotEmpty;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +148,8 @@ RecursoEstudo? recursoDeMapa(dynamic valor) {
     referencia: _texto(m['ref']),
     livro: _texto(m['livro']),
     temas: _listaDeTexto(m['tema']),
+    periodo: _texto(m['periodo']),
+    fatos: _listaDeTexto(m['fatos']),
     fonte: _fonteDeMapa(m['fonte']),
   );
 }
