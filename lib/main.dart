@@ -524,16 +524,24 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   /// Velocidade da fala em voz alta.
   ///
   /// 1.0 é a velocidade normal do motor nativo (Google TTS no Android,
-  /// AVSpeechSynthesizer no iOS). 0.85 fica levemente mais pausada: soa mais
-  /// humana, menos robótica, e melhora a compreensão de pessoas idosas.
-  static const double _velocidadeFala = 0.85;
+  /// AVSpeechSynthesizer no iOS). Para o público sênior (60+), reduzimos para
+  /// 0.36 — dentro da faixa recomendada de 0.33 a 0.38 — o que torna a leitura
+  /// bíblica bem mais lenta, pausada e fácil de acompanhar, sem soar robotizada.
+  static const double _velocidadeFala = 0.36;
+
+  /// Aplica os parâmetros de fala pensados para idosos: velocidade reduzida,
+  /// volume máximo e tom neutro. É reaplicado após `setVoice` porque alguns
+  /// motores resetam a velocidade ao trocar de voz.
+  Future<void> _aplicarParametrosDeFala() async {
+    await _tts.setSpeechRate(_velocidadeFala);
+    await _tts.setPitch(1.0);
+    await _tts.setVolume(1.0);
+  }
 
   Future<void> _configurarTtsInterno() async {
     // Usa o motor nativo do aparelho (sem custo e offline).
     await _tts.setLanguage('pt-BR');
-    await _tts.setSpeechRate(_velocidadeFala);
-    await _tts.setPitch(1.0);
-    await _tts.setVolume(1.0);
+    await _aplicarParametrosDeFala();
 
     final prefs = await SharedPreferences.getInstance();
     final vozSalva = prefs.getString('voz_tts_id');
@@ -648,6 +656,8 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           'name': escolhida.name,
           'locale': escolhida.locale,
         });
+        // Reaplica a velocidade/tom após trocar de voz (alguns motores resetam).
+        await _aplicarParametrosDeFala();
         await prefs.setString('voz_tts_id', escolhida.id);
       }
     }
@@ -663,15 +673,23 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     _tts.setCompletionHandler(() {
       if (!mounted) return;
       if (_filaFala.isNotEmpty) {
-        final proximo = _filaFala.removeAt(0);
-        _tts.speak(proximo).catchError((Object _) {
-          if (mounted) {
-            setState(() {
-              _ttsDisponivel = false;
-              _leituraAtiva = false;
-              _filaFala.clear();
-            });
+        // Pausa natural ("respiro") de 450 ms entre segmentos: dá tempo de
+        // assimilação e evita o tom robótico. O próximo segmento só é falado se
+        // a leitura continuar ativa (não pausada/parada) após o delay.
+        Future<void>.delayed(const Duration(milliseconds: 450), () {
+          if (!mounted || !_leituraAtiva || _pausado || _filaFala.isEmpty) {
+            return;
           }
+          final proximo = _filaFala.removeAt(0);
+          _tts.speak(proximo).catchError((Object _) {
+            if (mounted) {
+              setState(() {
+                _ttsDisponivel = false;
+                _leituraAtiva = false;
+                _filaFala.clear();
+              });
+            }
+          });
         });
         return;
       }
@@ -722,6 +740,8 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     if (escolhida == null) return;
 
     await _tts.setVoice({'name': escolhida.name, 'locale': escolhida.locale});
+    // Reaplica a velocidade/tom após trocar de voz (alguns motores resetam).
+    await _aplicarParametrosDeFala();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('voz_tts_id', escolhida.id);
 

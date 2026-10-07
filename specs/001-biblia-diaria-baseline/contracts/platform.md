@@ -32,8 +32,8 @@ plataformas de desenvolvimento e validação.
   (FR-010, caso B1).
 
 ### Contrato de configuração
-- Idioma fixo `pt-BR` (`setLanguage`), velocidade `0.85` (`_velocidadeFala`),
-  pitch padrão — leitura levemente pausada e natural, pensada para idosos.
+- Idioma fixo `pt-BR` (`setLanguage`), velocidade `0.36` (`_velocidadeFala`),
+  pitch padrão — leitura bem pausada e natural, pensada para idosos (60+).
 - Seleção de voz por `getVoices`: filtra vozes `pt`, prioriza neural/pt-BR
   feminina do motor nativo; sem vozes pt → Ajustes mostra "Nenhuma voz pt
   disponível no dispositivo." (caso B6).

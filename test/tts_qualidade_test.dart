@@ -17,7 +17,7 @@ Future<void> aguardarWidget(WidgetTester tester, Finder finder) async {
 }
 
 /// Garante que a leitura em voz alta seja configurada com fala humana:
-/// velocidade 0.85 (levemente pausada, ideal para idosos) e a melhor voz
+/// velocidade 0.36 (bem pausada, ideal para idosos) e a melhor voz
 /// pt-BR disponível no motor nativo do aparelho (Google TTS/AVSpeechSynthesizer).
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +31,7 @@ void main() {
   });
 
   testWidgets(
-      'TTS: velocidade 0.85 e melhor voz pt-BR neural selecionada por padrão',
+      'TTS: velocidade 0.36 e melhor voz pt-BR neural selecionada por padrão',
       (tester) async {
     final chamadas = <String>[];
     final argumentos = <String, Object?>{};
@@ -91,8 +91,8 @@ void main() {
     // Idioma português.
     expect(argumentos['setLanguage'], 'pt-BR');
 
-    // Velocidade 0.85: fala natural, levemente pausada (menos robótica).
-    expect(argumentos['setSpeechRate'], 0.85);
+    // Velocidade 0.36: fala bem pausada, ideal para o público sênior (60+).
+    expect(argumentos['setSpeechRate'], 0.36);
 
     // A voz padrão deve ser a de melhor qualidade disponível (neural pt-BR).
     expect(argumentos['setVoice'], {

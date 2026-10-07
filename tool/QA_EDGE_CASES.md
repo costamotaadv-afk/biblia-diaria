@@ -327,4 +327,4 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 
 > **Nota de infraestrutura de teste:** o `runAsync` usado para carregar assets via `rootBundle` deixa estado residual entre `testWidgets` do mesmo arquivo (o 2º teste falha ao abrir o app). Por isso, os arquivos com cenários de UI **combinam as fases em UM ÚNICO `testWidgets`** (ver `clipboard_b2_test.dart` e `concurrency_c4_test.dart`).
 
-> **Melhoria de voz (TTS):** velocidade de fala fixada em `0.85` (`_velocidadeFala` em `lib/main.dart`) — levemente pausada, mais natural e ideal para idosos. Seleção de voz prioriza neural/pt-BR feminina do motor nativo (Google TTS / AVSpeechSynthesizer), coberta por `test/tts_qualidade_test.dart`.
+> **Melhoria de voz (TTS):** velocidade de fala fixada em `0.36` (`_velocidadeFala` em `lib/main.dart`) — bem pausada, mais natural e ideal para idosos (60+). Seleção de voz prioriza neural/pt-BR feminina do motor nativo (Google TTS / AVSpeechSynthesizer), coberta por `test/tts_qualidade_test.dart`.

@@ -34,7 +34,7 @@ arquivos de teste referenciam os casos E/C/B que protegem:
 | `test/concurrency_c4_test.dart` | C4 | Favoritos: fila last-write-wins (sem perda em toques rápidos) |
 | `test/cache_livros_test.dart` | C5 | Cache com retry após falha transiente |
 | `test/tts_concorrencia_test.dart` | C1, C13 | Duplo-toque em Ouvir e em Copiar Pix não quebram |
-| `test/tts_qualidade_test.dart` | B6, B7, TTS | Configuração de voz (pt-BR, 0.85) e fallback de `voz_tts_id` |
+| `test/tts_qualidade_test.dart` | B6, B7, TTS | Configuração de voz (pt-BR, 0.36) e fallback de `voz_tts_id` |
 | `test/platform_c10_c11_test.dart` | C10, C11 | AdMob sem GMS e TTS na web não crasham |
 | `test/banner_c9_test.dart` | C9 | Falha de `load()` do banner é tratada |
 | `test/clipboard_b2_test.dart` | B2 | Clipboard negado → erro amigável (nunca "sucesso" falso) |
