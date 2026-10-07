@@ -1,0 +1,38 @@
+name: iOS build
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Build iOS (no codesign)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Compila sem assinar: valida que o projeto iOS (incluindo AdMob, TTS e
+      # shared_preferences) compila e linka. Não gera IPA distribuível — para
+      # isso é preciso configurar certificado/perfil de provisionamento da Apple.
+      - name: Build iOS (release, unsigned)
+        run: flutter build ios --release --no-codesign
+
+      - name: List artifact
+        run: ls -la build/ios/iphoneos

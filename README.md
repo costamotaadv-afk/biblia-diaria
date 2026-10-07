@@ -112,7 +112,9 @@ google_mobile_ads para inserir um banner.
    Isso gera o App Bundle (Google Play/Galaxy Store) e os APKs separados por
    arquitetura (instalação direta), com ofuscação e símbolos em build/symbols/.
    Baixando só a arquitetura certa, o APK cai de ~53 MB para ~21 MB sem perder
-   nenhuma funcionalidade. (Para iOS, use `flutter build ipa` em um Mac.)
+   nenhuma funcionalidade. Para iOS, a pasta `ios/` já está preparada: o build
+   assinado roda em um Mac (`tool/build_ios.sh ipa`) ou é validado pelo
+   workflow `iOS build` do GitHub Actions (compilação sem assinatura).
 
 ## 6. Configuração do AdMob (Etapa 2)
 
