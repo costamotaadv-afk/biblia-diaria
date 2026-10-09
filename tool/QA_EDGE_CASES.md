@@ -310,6 +310,46 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 
 ---
 
+## 5️⃣ Contextualização histórica dos Salmos (150 registros)
+
+**CTX1. JSON de contexto ausente, vazio ou corrompido**
+- **Input:** `null`, string não-JSON ou `[]` em `assets/data/contexto/Salmos.json`.
+- **Esperado:** `contextosDeJson` devolve `[]`; painel e busca de contexto mostram estado vazio amigável; sem `TypeError`.
+- **Impacto se falhar:** um arquivo truncado derrubaria a leitura dos Salmos e a busca de contexto (SC-004).
+- **Status:** ✅ Coberto por `test/contexto_historico_test.dart`.
+
+**CTX2. Item não-`Map`, `salmo` inválido ou tipos errados são ignorados**
+- **Input:** itens não-objeto, `salmo` ≤ 0, `id` vazio, listas com tipo errado.
+- **Esperado:** `contextoSalmoDeMapa`/`contextosDeJson` descartam inválidos; tipos errados viram `''`/`[]` sem lançar.
+- **Impacto se falhar:** um item malformado quebraria o catálogo de contexto inteiro.
+- **Status:** ✅ Coberto por `test/contexto_historico_test.dart`.
+
+**CTX3. Grau de certeza (parse + rótulos)**
+- **Input:** `certeza` em {documentado, tradicional, hipotese, indeterminado} ou código desconhecido/ausente.
+- **Esperado:** `certezaDeCodigo` mapeia os quatro códigos e trata desconhecido como indeterminado; `rotuloCerteza`/`explicacaoCerteza` são não-vazios.
+- **Impacto se falhar:** o selo de certeza exibiria chave técnica ou sumiria do painel.
+- **Status:** ✅ Coberto por `test/contexto_historico_test.dart`.
+
+**CTX4. Análise de referência cruzada para navegação interna**
+- **Input:** refs como `"2 Samuel 15–18"`, `"Salmos 4"`, `"1 Coríntios 13:4"`.
+- **Esperado:** `analisarReferencia` extrai livro (mais longo primeiro) + capítulo/versículo; faixas resolvem para o capítulo inicial; livro desconhecido → `null`.
+- **Impacto se falhar:** a referência cruzada navegaria para o livro/capítulo errado (prefixo numérico).
+- **Status:** ✅ Coberto por `test/contexto_historico_test.dart`.
+
+**CTX5/CTX6. Busca por personagem/evento/lugar/período e determinismo**
+- **Input:** busca por "Absalão", "MOISÉS", "confianca" ou "salmo 3".
+- **Esperado:** `filtrarContextoPorBusca` casa sem caixa/acentos; busca vazia devolve todos na ordem original; `contextoDoSalmo` é determinístico.
+- **Impacto se falhar:** a busca (§4.6) não localizaria Salmos por personagens/lugares/períodos.
+- **Status:** ✅ Coberto por `test/contexto_historico_test.dart`.
+
+**CTX7. Integridade dos 150 registros e referências resolvíveis**
+- **Input:** o próprio `assets/data/contexto/Salmos.json`.
+- **Esperado:** exatamente 150 Salmos, `id` únicos, campos obrigatórios preenchidos e `referencias_cruzadas` resolvem para livros de `indice.json`.
+- **Impacto se falhar:** um Salmo ausente ou uma referência inválida deixaria lacunas de conteúdo ou navegação "morta".
+- **Status:** ✅ Coberto por `test/contexto_historico_test.dart`.
+
+---
+
 ## 📊 Resumo de prioridade (o que testar primeiro)
 
 | Severidade | Caso | Tipo | Status |
@@ -326,8 +366,9 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 | 🟡 Baixa | B4, C8 — Virada do dia, rotação | Diversos | ✅ Corrigido + testado |
 | 🟡 Baixa | E1–E4, E13, B5, B7, C9 | Dados/Plataforma | ✅ Corrigido + testado |
 | 🟡 Baixa | EST1–EST8 — Recursos de estudo (parsing/casamento/filtros/contexto histórico) | Dados | ✅ Coberto + testado |
+| 🟡 Baixa | CTX1–CTX7 — Contexto histórico dos Salmos (parsing/certeza/navegação/busca/integridade) | Dados | ✅ Coberto + testado |
 
-**Cobertura automatizada atual:** `test/edge_cases_e10_test.dart`, `test/concurrency_c4_test.dart`, `test/platform_c10_c11_test.dart`, `test/clipboard_b2_test.dart`, `test/tts_qualidade_test.dart`, `test/limites_dados_test.dart`, `test/dados_biblicos_test.dart`, `test/config_negocio_test.dart`, `test/banner_c9_test.dart`, `test/banner_timeout_c9_test.dart`, `test/rotacao_c8_test.dart`, `test/catalogo_estudos_test.dart`, `test/cache_livros_test.dart`, `test/estresse_c6_test.dart`, `test/estresse_e15_test.dart`, `test/robustez_e16_test.dart`, `test/troca_aba_c7_test.dart`, `test/tts_concorrencia_test.dart`, `test/tts_retomada_c12_test.dart`, `test/overflow_b12_test.dart`, `test/virada_dia_b4_test.dart`, `test/widget_test.dart`.
+**Cobertura automatizada atual:** `test/edge_cases_e10_test.dart`, `test/concurrency_c4_test.dart`, `test/platform_c10_c11_test.dart`, `test/clipboard_b2_test.dart`, `test/tts_qualidade_test.dart`, `test/limites_dados_test.dart`, `test/dados_biblicos_test.dart`, `test/config_negocio_test.dart`, `test/banner_c9_test.dart`, `test/banner_timeout_c9_test.dart`, `test/rotacao_c8_test.dart`, `test/catalogo_estudos_test.dart`, `test/cache_livros_test.dart`, `test/estresse_c6_test.dart`, `test/estresse_e15_test.dart`, `test/robustez_e16_test.dart`, `test/troca_aba_c7_test.dart`, `test/tts_concorrencia_test.dart`, `test/tts_retomada_c12_test.dart`, `test/overflow_b12_test.dart`, `test/virada_dia_b4_test.dart`, `test/widget_test.dart`, `test/contexto_historico_test.dart`.
 
 > **Refatoração para testabilidade (E1–E4, E13, B5):** a lógica de seleção do versículo do dia e os casts de JSON foram extraídos para funções puras em `lib/dados_seguros.dart` (`diasDesdeEpoca`, `comoLista`, `selecionarVersiculoDoDia`), permitindo teste unitário determinístico sem widget.
 

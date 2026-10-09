@@ -8,15 +8,19 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'cache_contexto.dart';
 import 'cache_estudos.dart';
 import 'cache_livros.dart';
 import 'catalogo_estudos.dart';
+import 'contexto_historico.dart';
 import 'config.dart';
 import 'dados_seguros.dart';
 import 'leitura_natural.dart';
 import 'platform_support.dart';
 import 'widgets/banner_anuncio.dart';
+import 'widgets/painel_contexto_historico.dart';
 import 'widgets/painel_estudos.dart';
+import 'widgets/tela_contexto_historico.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -184,6 +188,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   List<String> _mensagens = [];
   late final CacheDeLivros _cacheLivros;
   late final CacheDeEstudos _cacheEstudos;
+  late final CacheDeContexto _cacheContexto;
   bool _carregamentoInicial = true;
   Set<String> favoritosVersiculos = {};
   Set<String> favoritosCapitulos = {};
@@ -197,6 +202,11 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   final Set<String> _livrosExpandidos = {};
   final Map<String, List<dynamic>> _capitulosPorLivro = {};
   final Set<String> _livrosComErro = {};
+  // Ancoragem de referência cruzada na lista preguiçosa da aba Bíblia.
+  final ScrollController _controleLeitura = ScrollController();
+  String? _referenciaAlvo;
+  int? _indiceLinhaAlvo;
+  int _totalLinhasLeitura = 0;
   String? _tipoFiltroEstudos;
   String _livroFiltroEstudos = '';
   String _buscaEstudos = '';
@@ -230,6 +240,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     super.initState();
     _cacheLivros = CacheDeLivros(carregador: _carregarLivroMap);
     _cacheEstudos = CacheDeEstudos(carregador: _carregarEstudosLivro);
+    _cacheContexto = CacheDeContexto(carregador: _carregarContextoLivro);
     _carregar();
     _configurarTts();
   }
@@ -239,6 +250,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     // Em plataformas sem plugin (web), o stop lançaria exceção assíncrona;
     // o catchError evita erro não tratado (caso C11 da matriz de QA).
     _tts.stop().catchError((Object _) {});
+    _controleLeitura.dispose();
     super.dispose();
   }
 
@@ -333,6 +345,18 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       return recursosDeJson(json.decode(jsonStr));
     } catch (_) {
       return const <RecursoEstudo>[];
+    }
+  }
+
+  /// Lê a contextualização histórica dos Salmos
+  /// (assets/data/contexto/<livro>.json). Nunca lança (caso CTX1).
+  Future<List<ContextoSalmo>?> _carregarContextoLivro(String livro) async {
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/data/contexto/$livro.json');
+      return contextosDeJson(json.decode(jsonStr));
+    } catch (_) {
+      return const <ContextoSalmo>[];
     }
   }
 
@@ -459,6 +483,148 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     await _iniciarLeitura(partes.join('. '));
   }
 
+  /// True se o capítulo de Salmos tem contextualização histórica cadastrada.
+  bool _temContexto(String referencia, String livro) {
+    if (livro != 'Salmos') return false;
+    final numero = _numeroSalmoDaReferencia(referencia);
+    return numero != null && numero >= 1 && numero <= 150;
+  }
+
+  /// Extrai o número do Salmo de uma referência de capítulo ("Salmos 3" → 3).
+  int? _numeroSalmoDaReferencia(String referencia) {
+    final ref = referencia.trim();
+    if (!ref.startsWith('Salmos ')) return null;
+    return int.tryParse(ref.substring('Salmos '.length).trim());
+  }
+
+  Future<void> _abrirContextoDoSalmo(int numero) async {
+    final lista = await _cacheContexto.assegurar('Salmos');
+    if (!mounted) return;
+    final contexto = lista == null ? null : contextoDoSalmo(lista, numero);
+    if (contexto == null) {
+      _mostrarAviso('Contexto histórico indisponível para este Salmo.');
+      return;
+    }
+    await _mostrarPainelContexto(contexto);
+  }
+
+  Future<void> _mostrarPainelContexto(ContextoSalmo contexto) async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.9,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: PainelContextoHistorico(
+                contexto: contexto,
+                ttsDisponivel: _ttsDisponivel,
+                onOuvir: _falarContexto,
+                onNavegarReferencia: _irParaReferencia,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _falarContexto(ContextoSalmo contexto) async {
+    final titulo = contexto.titulo.isEmpty
+        ? 'Salmo ${contexto.numero}'
+        : 'Salmo ${contexto.numero}. ${contexto.titulo}';
+    final partes = <String>[
+      titulo,
+      if (contexto.temAutoria) 'Autoria tradicional: ${contexto.autoria}',
+      if (contexto.temPeriodo) 'Período histórico: ${contexto.periodo}',
+      if (contexto.temExplicacao) contexto.explicacao,
+    ];
+    await _iniciarLeitura(partes.join('. '));
+  }
+
+  Future<void> _abrirTelaContexto() async {
+    final lista = await _cacheContexto.assegurar('Salmos');
+    if (!mounted) return;
+    final contextos = lista ?? const <ContextoSalmo>[];
+    if (contextos.isEmpty) {
+      _mostrarAviso('Contexto histórico indisponível no momento.');
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TelaContextoHistorico(
+          contextos: contextos,
+          ttsDisponivel: _ttsDisponivel,
+          onOuvir: _falarContexto,
+          onNavegarReferencia: _irParaReferencia,
+        ),
+      ),
+    );
+  }
+
+  /// Navega para uma referência cruzada: fecha rotas abertas, volta à aba
+  /// Bíblia, expande/carrega o livro e ancora (melhor esforço) no capítulo.
+  Future<void> _irParaReferencia(String referencia) async {
+    final nomes = _indice.map((i) => '${i['nome']}').toList();
+    final alvo = analisarReferencia(referencia, nomes);
+    if (alvo == null || alvo.capitulo == null) {
+      _mostrarAviso('Referência não disponível no aplicativo.');
+      return;
+    }
+
+    Navigator.of(context).popUntil((r) => r.isFirst);
+
+    final chaveCapitulo = '${alvo.livro} ${alvo.capitulo}';
+    setState(() {
+      aba = 1;
+      _livrosExpandidos.add(alvo.livro);
+      _referenciaAlvo = chaveCapitulo;
+    });
+
+    await _assegurarLivro(alvo.livro);
+    if (!mounted) return;
+    setState(() {
+      final livro = _cacheLivros.cache[alvo.livro];
+      if (livro == null) {
+        _livrosComErro.add(alvo.livro);
+      } else {
+        _capitulosPorLivro[alvo.livro] =
+            comoLista(livro['capitulos']) ?? const [];
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _rolarParaAlvo());
+  }
+
+  /// Rola (aproximadamente) até o capítulo-alvo usando a proporção de linhas
+  /// registradas durante o build da lista preguiçosa.
+  void _rolarParaAlvo() {
+    final indice = _indiceLinhaAlvo;
+    final total = _totalLinhasLeitura;
+    if (indice == null || total <= 0) return;
+    if (!_controleLeitura.hasClients) return;
+    final posicao = _controleLeitura.position;
+    if (posicao.maxScrollExtent <= 0) return;
+    final fracao = (indice / total).clamp(0.0, 1.0);
+    final offset =
+        (posicao.maxScrollExtent * fracao).clamp(0.0, posicao.maxScrollExtent);
+    _controleLeitura.jumpTo(offset);
+  }
+
+  /// Exibe um aviso rápido (SnackBar).
+  void _mostrarAviso(String mensagem) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(mensagem)));
+  }
+
   Future<void> _toggleFavoritoEstudo(String id) async {
     if (!mounted) return;
     setState(() {
@@ -512,8 +678,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 
   Future<void> _configurarTts() async {
-    // Em plataformas sem plugin (web, Linux) o TTS não existe: desabilita a
-    // feature e evita MissingPluginException (caso C11 da matriz de QA).
+    // Em plataformas sem plugin (Linux) o TTS não existe: desabilita a feature
+    // e evita MissingPluginException (caso C11 da matriz de QA). A web usa o
+    // speechSynthesis do navegador (suportaTts == true) e degrada graciosamente.
     if (!suportaTts) {
       if (mounted) {
         setState(() => _ttsDisponivel = false);
@@ -549,7 +716,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 
   Future<void> _configurarTtsInterno() async {
-    // Usa o motor nativo do aparelho (sem custo e offline).
+    // Usa o motor nativo do aparelho (sem custo e offline). Na web, a fala vem
+    // do speechSynthesis do navegador. Vozes ausentes ou `getVoices` vazio são
+    // tratados adiante sem desabilitar o TTS (usa-se a voz padrão do motor).
     await _tts.setLanguage('pt-BR');
     await _aplicarParametrosDeFala();
 
@@ -662,12 +831,16 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       }
 
       if (escolhida != null) {
-        await _tts.setVoice({
-          'name': escolhida.name,
-          'locale': escolhida.locale,
-        });
-        // Reaplica a velocidade/tom após trocar de voz (alguns motores resetam).
-        await _aplicarParametrosDeFala();
+        try {
+          await _tts.setVoice({
+            'name': escolhida.name,
+            'locale': escolhida.locale,
+          });
+          // Reaplica a velocidade/tom após trocar de voz (alguns motores resetam).
+          await _aplicarParametrosDeFala();
+        } catch (_) {
+          // Web/browsers podem não suportar setVoice; segue com a voz padrão.
+        }
         await prefs.setString('voz_tts_id', escolhida.id);
       }
     }
@@ -749,9 +922,13 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     }
     if (escolhida == null) return;
 
-    await _tts.setVoice({'name': escolhida.name, 'locale': escolhida.locale});
-    // Reaplica a velocidade/tom após trocar de voz (alguns motores resetam).
-    await _aplicarParametrosDeFala();
+    try {
+      await _tts.setVoice({'name': escolhida.name, 'locale': escolhida.locale});
+      // Reaplica a velocidade/tom após trocar de voz (alguns motores resetam).
+      await _aplicarParametrosDeFala();
+    } catch (_) {
+      // Web/browsers podem não suportar setVoice; mantém a voz atual.
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('voz_tts_id', escolhida.id);
 
@@ -1214,6 +1391,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     // construído quando entra na viewport. Antes, um único livro grande
     // (ex.: Salmos, ~2.400 versículos) montava todos os ListTiles de uma vez
     // num frame — o custo de CPU/memória que o caso C6 da matriz expunha.
+    _indiceLinhaAlvo = null;
     final linhas = <Widget Function()>[];
     for (final livro in _indice) {
       final nomeLivro = '${livro['nome']}';
@@ -1238,6 +1416,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
         final numeroCapitulo = capitulo['numero'];
         final chaveCapitulo = _chaveCapitulo(nomeLivro, numeroCapitulo);
         final versiculos = comoLista(capitulo['versiculos']) ?? const [];
+        if (chaveCapitulo == _referenciaAlvo) {
+          _indiceLinhaAlvo = linhas.length;
+        }
         linhas.add(
           () => _cabecalhoCapitulo(nomeLivro, numeroCapitulo, chaveCapitulo),
         );
@@ -1251,7 +1432,10 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       }
     }
 
+    _totalLinhasLeitura = linhas.length;
+
     return ListView.builder(
+      controller: _controleLeitura,
       padding: const EdgeInsets.all(12),
       physics: const ClampingScrollPhysics(),
       dragStartBehavior: DragStartBehavior.down,
@@ -1310,8 +1494,14 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: chaveCapitulo == _referenciaAlvo
+            ? Theme.of(context).colorScheme.primaryContainer
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(10),
+        border: chaveCapitulo == _referenciaAlvo
+            ? Border.all(
+                color: Theme.of(context).colorScheme.primary, width: 1.5)
+            : null,
       ),
       child: Row(
         children: [
@@ -1327,6 +1517,15 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               icon: const Icon(Icons.auto_stories_outlined),
               onPressed: () =>
                   _abrirEstudosDaReferencia(chaveCapitulo, nomeLivro),
+            ),
+          if (_temContexto(chaveCapitulo, nomeLivro))
+            IconButton(
+              tooltip: 'Contexto Histórico',
+              icon: const Icon(Icons.history_edu),
+              onPressed: () {
+                final numero = _numeroSalmoDaReferencia(chaveCapitulo);
+                if (numero != null) _abrirContextoDoSalmo(numero);
+              },
             ),
           IconButton(
             tooltip: 'Ouvir capítulo',
@@ -1414,6 +1613,17 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: OutlinedButton.icon(
+            onPressed: _abrirTelaContexto,
+            icon: const Icon(Icons.history_edu),
+            label: const Text('Contexto histórico dos Salmos'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
           child: TextField(

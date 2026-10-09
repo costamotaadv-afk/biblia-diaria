@@ -36,3 +36,4 @@ flutter:
     - assets/data/
     - assets/data/livros/
     - assets/data/estudos/
+    - assets/data/contexto/

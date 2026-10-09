@@ -8,9 +8,11 @@ bool get suportaAdMob {
       defaultTargetPlatform == TargetPlatform.iOS;
 }
 
-/// O plugin flutter_tts não possui implementação para web nem para Linux.
+/// O flutter_tts possui implementação para web (via `speechSynthesis` do
+/// navegador), Android, iOS, macOS e Windows. Fica indisponível apenas no
+/// Linux, que não tem implementação nativa.
 bool get suportaTts {
-  if (kIsWeb) return false;
+  if (kIsWeb) return true;
   return defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.macOS ||
