@@ -158,6 +158,24 @@ Antes de publicar, confirme no Nubank que a chave continua ativa e teste uma
 transferência de valor baixo. O aplicativo também orienta o usuário a conferir o
 nome do recebedor no banco antes de confirmar.
 
+## 8. Publicação na web (Streamlit)
+
+O app tem um porte web completo em `webapp/` (mesmas 5 abas, TTS e dados
+reutilizados de `assets/data`). Para publicar gratuitamente no Streamlit Cloud
+e obter um link para encaminhar, siga o passo a passo em
+[`docs/DEPLOY_STREAMLIT.md`](docs/DEPLOY_STREAMLIT.md).
+
+Resumo rápido:
+
+1. Confirme que o repositório está no GitHub (já está:
+   https://github.com/costamotaadv-afk/biblia-diaria).
+2. Faça commit e push dos arquivos `webapp/`, `requirements.txt` e
+   `.streamlit/config.toml` (todos já preparados).
+3. Em https://share.streamlit.io → "Create app" → selecione o repositório e use
+   **Main file path** = `webapp/streamlit_app.py`.
+
+O link gerado terá o formato `https://<nome-do-app>.streamlit.app`.
+
 ## Se algo der errado
 
 - flutter doctor sempre mostra o que está faltando — leia a mensagem com calma,

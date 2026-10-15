@@ -58,3 +58,11 @@ android/key.properties
 
 # Projeto separado (nao faz parte deste repositorio)
 meu-novo-projeto/
+
+# Streamlit webapp
+webapp/.state/
+__pycache__/
+
+# Artefato de exportação (não faz parte do código-fonte)
+export_biblia_diaria.zip
+
