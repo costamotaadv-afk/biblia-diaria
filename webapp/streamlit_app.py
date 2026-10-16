@@ -3,6 +3,17 @@
 Executar: ``streamlit run webapp/streamlit_app.py``
 """
 
+import sys
+from pathlib import Path
+
+# O Streamlit insere no ``sys.path`` o caminho do *script* (``webapp/streamlit_app.py``),
+# não o diretório ``webapp/``. Sem isto, ``from core import ...`` / ``from ui import ...``
+# falham com ``ModuleNotFoundError`` quando o app é iniciado por ``streamlit run`` a
+# partir da raiz do repositório. Garantimos o diretório do script no ``sys.path``.
+_APP_DIR = Path(__file__).resolve().parent
+if str(_APP_DIR) not in sys.path:
+    sys.path.insert(0, str(_APP_DIR))
+
 import streamlit as st
 
 from core import storage
@@ -46,7 +57,7 @@ _injetar_css()
 
 # Navegação horizontal ligada ao estado (substitui a NavigationBar; permite
 # navegação programática — ex.: referência cruzada → aba Bíblia).
-st.radio('', _ABAS, key='aba', horizontal=True, label_visibility='collapsed')
+st.radio('Navegação', _ABAS, key='aba', horizontal=True, label_visibility='collapsed')
 
 aba = st.session_state['aba']
 if aba == 'Início':
