@@ -55,6 +55,12 @@ android/key.properties
 *.jks
 *.keystore
 
+# Variáveis de ambiente e segredos (nunca commitar chaves)
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
 
 # Projeto separado (nao faz parte deste repositorio)
 meu-novo-projeto/
