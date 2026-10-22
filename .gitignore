@@ -72,3 +72,6 @@ __pycache__/
 # Artefato de exportação (não faz parte do código-fonte)
 export_biblia_diaria.zip
 
+# Cache do comparador de Bíblia (baixado da web, ~4 MB)
+.pt_acf_cache.json
+
