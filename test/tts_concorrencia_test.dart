@@ -47,16 +47,16 @@ void main() {
     await tester.pumpWidget(const BibliaApp());
     await aguardarWidget(tester, find.text('Bíblia Diária'));
 
-    final botaoOuvir = find.widgetWithText(FilledButton, 'Ouvir versículo');
+    final botaoOuvir = find.widgetWithText(TextButton, 'Ouvir');
     for (var i = 0; i < 50; i++) {
       await tester.pump();
       if (botaoOuvir.evaluate().isEmpty) continue;
-      final botao = tester.widget<FilledButton>(botaoOuvir);
+      final botao = tester.widget<TextButton>(botaoOuvir);
       if (botao.onPressed != null) break;
     }
     await tester.ensureVisible(botaoOuvir);
     await tester.pumpAndSettle();
-    expect(tester.widget<FilledButton>(botaoOuvir).onPressed, isNotNull);
+    expect(tester.widget<TextButton>(botaoOuvir).onPressed, isNotNull);
 
     // Dois taps sem pump: leitura concorrente "último vence", sem exceção.
     await tester.tap(botaoOuvir);

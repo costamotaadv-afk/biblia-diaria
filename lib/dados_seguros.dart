@@ -153,10 +153,14 @@ String? textoDeVersiculoEmLivros(
 /// Procura o texto (falado) de um capítulo inteiro — "Versículo N. ..." —
 /// entre os livros carregados em cache. Mesma defensividade de
 /// [textoDeVersiculoEmLivros] (E16): nunca lança; sem correspondência → null.
+///
+/// [anunciarVersiculos] = `false` remove o prefixo "Versículo N." para uma
+/// narração mais fluida (as pausas vêm da pontuação dos próprios versículos).
 String? textoDeCapituloEmLivros(
   Iterable<Map<String, dynamic>> livros,
-  String chaveCapitulo,
-) {
+  String chaveCapitulo, {
+  bool anunciarVersiculos = true,
+}) {
   for (final livro in livros) {
     for (final capitulo in mapasSeguros(comoLista(livro['capitulos']))) {
       final chave = '${livro['nome']} ${capitulo['numero']}';
@@ -164,10 +168,10 @@ String? textoDeCapituloEmLivros(
       final versiculos = mapasSeguros(comoLista(capitulo['versiculos']));
       final textos = <String>[];
       for (final versiculo in versiculos) {
-        textos.add(
-          'Versículo ${numeroPorExtenso('${versiculo['numero']}')}. '
-          '${versiculo['texto']}',
-        );
+        final prefixo = anunciarVersiculos
+            ? 'Versículo ${numeroPorExtenso('${versiculo['numero']}')}. '
+            : '';
+        textos.add('$prefixo${versiculo['texto']}');
       }
       return textos.join(' ');
     }

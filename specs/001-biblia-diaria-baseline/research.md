@@ -42,7 +42,8 @@ base no código existente, na spec e na constituição v1.0.0 — **nenhum
 ## 4. Integração de voz (leitura em voz alta)
 
 - **Decision**: plugin de TTS do aparelho (`flutter_tts`), voz pt-BR nativa,
-  velocidade 0.36, seleção de voz neural/pt-BR com fallback; capacidade
+  velocidade 0.48, seleção de voz neural/wavenet/pt-BR com fallback e descarte
+  de motores legados (pico/compact/espeak); capacidade
   declarada por `platform_support.dart` (indisponível na web/Linux).
 - **Rationale**: sem custo e sem rede (usa o motor do SO). O contrato de
   leitura é manual e não contínuo (FR-007), e a falha do plugin degrada para

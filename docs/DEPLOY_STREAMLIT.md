@@ -63,6 +63,19 @@ https://biblia-diaria.streamlit.app
 É esse link que você encaminha a quem quiser — funciona em qualquer navegador,
 sem instalar nada.
 
+## Link de compartilhamento (WhatsApp)
+
+O botão "📲 Compartilhar no WhatsApp" (aba Início) usa o link centralizado em
+`webapp/core/config.py` → `LINK_DOWNLOAD`. Deixe-o vazio enquanto o app não
+estiver publicado: o botão fica oculto (não envia usuários para um endereço
+morto). Ao publicar, defina:
+
+```python
+LINK_DOWNLOAD = 'https://biblia-diaria.streamlit.app'
+```
+
+O app Flutter usa o mesmo mecanismo em `lib/config.dart` → `linkDownloadApp`.
+
 ## Observações importantes
 
 - **Persistência**: mantenha `BIBLIA_PERSIST=0` (padrão). No Cloud o filesystem

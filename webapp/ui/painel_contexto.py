@@ -7,6 +7,7 @@ Sem regra de negócio; espelha ``lib/widgets/painel_contexto_historico.dart`` e
 import streamlit as st
 
 from core import dados_seguros as ds
+from core import config
 from core import data_source
 from core.contexto_historico import (
     analisar_referencia,
@@ -18,12 +19,19 @@ from . import tts
 
 
 def ir_para_referencia(referencia: str) -> None:
-    """Navega para uma referência cruzada: volta à aba Bíblia e seleciona o capítulo."""
+    """Callback (on_click) que navega para uma referência cruzada.
+
+    Apenas altera ``st.session_state``. Roda antes da reinicialização do script
+    (via ``st.button(..., on_click=...)``), portanto pode atualizar o widget
+    ``aba`` sem o ``StreamlitAPIException`` de "widget já instanciado". A
+    mensagem de referência indisponível é exibida por ``render_detalhe`` no
+    rerun seguinte.
+    """
     indice = data_source.carregar_indice()
     nomes = [f"{i.get('nome')}" for i in indice]
     alvo = analisar_referencia(referencia, nomes)
     if alvo is None or alvo.capitulo is None:
-        st.warning('Referência não disponível no aplicativo.')
+        st.session_state['contexto_ref_indisponivel'] = referencia
         return
 
     livro = data_source.carregar_livro(alvo.livro)
@@ -41,11 +49,14 @@ def ir_para_referencia(referencia: str) -> None:
     st.session_state['aba'] = 'Bíblia'
     st.session_state['biblia_livro'] = alvo.livro
     st.session_state['biblia_capitulo_idx'] = idx
-    st.rerun()
 
 
 def render_detalhe(contexto, tts_lento=False):
     """Contextualização completa de um Salmo."""
+    indisponivel = st.session_state.pop('contexto_ref_indisponivel', None)
+    if indisponivel:
+        st.warning('Referência não disponível no aplicativo.')
+
     st.markdown(f'### Salmo {contexto.numero}')
     if contexto.tem_titulo:
         st.markdown(f'**{contexto.titulo}**')
@@ -89,8 +100,12 @@ def render_detalhe(contexto, tts_lento=False):
         st.markdown('**Referências bíblicas cruzadas**')
         for ref in contexto.referencias_cruzadas:
             label = ref.referencia + (f' — {ref.nota}' if ref.tem_nota else '')
-            if st.button(label, key=f'ctx_ref_{contexto.id}_{ref.referencia}'):
-                ir_para_referencia(ref.referencia)
+            st.button(
+                label,
+                key=f'ctx_ref_{contexto.id}_{ref.referencia}',
+                on_click=ir_para_referencia,
+                args=(ref.referencia,),
+            )
 
     if contexto.tem_explicacao:
         st.markdown('**Explicação histórica**')
@@ -107,6 +122,18 @@ def render_detalhe(contexto, tts_lento=False):
         '🔊 Ouvir contexto', key=f'ouvir_ctx_{contexto.id}'
     ):
         tts.falar_contexto(contexto, tts_lento)
+
+    st.link_button(
+        '📤 Compartilhar Salmo',
+        config.url_whatsapp(
+            config.mensagem_salmo(
+                contexto.numero,
+                contexto.titulo,
+                contexto.explicacao,
+            )
+        ),
+        type='secondary',
+    )
 
 
 def render_tela(contextos, tts_lento=False):

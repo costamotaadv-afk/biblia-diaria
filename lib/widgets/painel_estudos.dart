@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../catalogo_estudos.dart';
+import '../tema.dart';
 
 /// Painel reutilizável que exibe os recursos de estudo de um trecho (ou da
 /// biblioteca "Estudos").
@@ -113,7 +114,7 @@ class PainelEstudos extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 recurso.temCorpo ? recurso.corpo : 'Conteúdo não disponível.',
-                style: const TextStyle(fontSize: 16, height: 1.5),
+                style: estiloCorpoEstudo,
               ),
               if (recurso.temFatos) _blocoFatos(context, recurso.fatos),
               if (credito.isNotEmpty) ...[
@@ -194,7 +195,7 @@ class PainelEstudos extends StatelessWidget {
                 Expanded(
                   child: Text(
                     fato,
-                    style: const TextStyle(fontSize: 16, height: 1.5),
+                    style: estiloCorpoEstudo,
                   ),
                 ),
               ],

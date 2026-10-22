@@ -41,7 +41,7 @@ void main() {
     await tester.pumpWidget(const BibliaApp());
     await aguardarWidget(tester, find.text('Bíblia Diária'));
 
-    expect(find.text('Versículo do Dia'), findsOneWidget);
+    expect(find.text('VERSÍCULO DO DIA'), findsOneWidget);
     expect(find.text('Mensagem para você'), findsOneWidget);
 
     await tester.tap(find.text('Bíblia').last);

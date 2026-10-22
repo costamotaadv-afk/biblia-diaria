@@ -125,8 +125,12 @@ def texto_de_versiculo_em_livros(livros, chave):
     return None
 
 
-def texto_de_capitulo_em_livros(livros, chave_capitulo):
-    """Procura o texto (falado) de um capítulo — "Versículo N. ..."."""
+def texto_de_capitulo_em_livros(livros, chave_capitulo, anunciar_versiculos=True):
+    """Procura o texto (falado) de um capítulo — "Versículo N. ...".
+
+    ``anunciar_versiculos=False`` remove o prefixo "Versículo N." para uma
+    narração mais fluida (as pausas vêm da pontuação dos próprios versículos).
+    """
     for livro in livros:
         for capitulo in mapas_seguros(como_lista(livro.get('capitulos'))):
             chave = (
@@ -136,10 +140,13 @@ def texto_de_capitulo_em_livros(livros, chave_capitulo):
             if chave != chave_capitulo:
                 continue
             versiculos = mapas_seguros(como_lista(capitulo.get('versiculos')))
-            textos = [
-                f"Versículo {numero_por_extenso(_dart_str(versiculo.get('numero')))}. "
-                f"{_dart_str(versiculo.get('texto'))}"
-                for versiculo in versiculos
-            ]
+            textos = []
+            for versiculo in versiculos:
+                prefixo = (
+                    f"Versículo {numero_por_extenso(_dart_str(versiculo.get('numero')))}. "
+                    if anunciar_versiculos
+                    else ''
+                )
+                textos.append(f"{prefixo}{_dart_str(versiculo.get('texto'))}")
             return ' '.join(textos)
     return None

@@ -57,11 +57,11 @@ void main() {
     await aguardarWidget(tester, find.text('Bíblia Diária'));
 
     // Inicia a leitura do versículo do dia (speak com texto válido → sucesso).
-    final botaoOuvir = find.widgetWithText(FilledButton, 'Ouvir versículo');
+    final botaoOuvir = find.widgetWithText(TextButton, 'Ouvir');
     for (var i = 0; i < 50; i++) {
       await tester.pump();
       if (botaoOuvir.evaluate().isEmpty) continue;
-      if (tester.widget<FilledButton>(botaoOuvir).onPressed != null) break;
+      if (tester.widget<TextButton>(botaoOuvir).onPressed != null) break;
     }
     await tester.ensureVisible(botaoOuvir);
     await tester.pumpAndSettle();

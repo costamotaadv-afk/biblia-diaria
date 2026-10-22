@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../contexto_historico.dart';
+import '../tema.dart';
 
 /// Painel reutilizável que exibe a contextualização histórica completa de um
 /// Salmo: identificação, autoria, período, contexto político, acontecimentos,
@@ -11,6 +12,8 @@ class PainelContextoHistorico extends StatelessWidget {
   final bool ttsDisponivel;
   final void Function(ContextoSalmo contexto)? onOuvir;
   final void Function(String referencia) onNavegarReferencia;
+  final void Function(BuildContext context, ContextoSalmo contexto)?
+      onCompartilhar;
 
   const PainelContextoHistorico({
     super.key,
@@ -18,6 +21,7 @@ class PainelContextoHistorico extends StatelessWidget {
     required this.onNavegarReferencia,
     this.onOuvir,
     this.ttsDisponivel = false,
+    this.onCompartilhar,
   });
 
   @override
@@ -74,7 +78,7 @@ class PainelContextoHistorico extends StatelessWidget {
             'Contexto político e social',
             Text(
               contexto.contextoPolitico,
-              style: const TextStyle(fontSize: 16, height: 1.5),
+              style: estiloCorpoEstudo,
             ),
           ),
         if (contexto.temEventos)
@@ -89,7 +93,7 @@ class PainelContextoHistorico extends StatelessWidget {
             'Localização geográfica',
             Text(
               contexto.localizacao,
-              style: const TextStyle(fontSize: 16, height: 1.5),
+              style: estiloCorpoEstudo,
             ),
           ),
         if (contexto.temReferencias)
@@ -104,7 +108,7 @@ class PainelContextoHistorico extends StatelessWidget {
             'Contextualização histórica',
             Text(
               contexto.explicacao,
-              style: const TextStyle(fontSize: 16, height: 1.5),
+              style: estiloCorpoEstudo,
             ),
           ),
         if (contexto.temFontes)
@@ -115,6 +119,17 @@ class PainelContextoHistorico extends StatelessWidget {
             onPressed: () => onOuvir!(contexto),
             icon: const Icon(Icons.volume_up_outlined),
             label: const Text('Ouvir contexto'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+          ),
+        ],
+        if (onCompartilhar != null) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => onCompartilhar!(context, contexto),
+            icon: const Icon(Icons.share_outlined),
+            label: const Text('Compartilhar Salmo'),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
             ),
@@ -248,7 +263,7 @@ class PainelContextoHistorico extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         '$rotulo: $valor',
-        style: const TextStyle(fontSize: 16, height: 1.5),
+        style: estiloCorpoEstudo,
       ),
     );
   }
@@ -268,7 +283,7 @@ class PainelContextoHistorico extends StatelessWidget {
                 Expanded(
                   child: Text(
                     topico,
-                    style: const TextStyle(fontSize: 16, height: 1.5),
+                    style: estiloCorpoEstudo,
                   ),
                 ),
               ],

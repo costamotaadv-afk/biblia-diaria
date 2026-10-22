@@ -11,6 +11,8 @@ class TelaContextoHistorico extends StatefulWidget {
   final bool ttsDisponivel;
   final void Function(ContextoSalmo contexto)? onOuvir;
   final void Function(String referencia) onNavegarReferencia;
+  final void Function(BuildContext context, ContextoSalmo contexto)?
+      onCompartilhar;
 
   const TelaContextoHistorico({
     super.key,
@@ -18,6 +20,7 @@ class TelaContextoHistorico extends StatefulWidget {
     required this.onNavegarReferencia,
     this.onOuvir,
     this.ttsDisponivel = false,
+    this.onCompartilhar,
   });
 
   @override
@@ -107,6 +110,7 @@ class _TelaContextoHistoricoState extends State<TelaContextoHistorico> {
                 ttsDisponivel: widget.ttsDisponivel,
                 onOuvir: widget.onOuvir,
                 onNavegarReferencia: widget.onNavegarReferencia,
+                onCompartilhar: widget.onCompartilhar,
               ),
             ),
           ),

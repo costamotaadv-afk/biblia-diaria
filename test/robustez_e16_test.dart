@@ -86,5 +86,34 @@ void main() {
       );
       expect(textoDeCapituloEmLivros(livroCorrompido, 'Gênesis 1'), isNull);
     });
+
+    test('textoDeCapituloEmLivros sem anunciar versículos', () {
+      final livros = <Map<String, dynamic>>[
+        {
+          'nome': 'Gênesis',
+          'capitulos': <dynamic>[
+            {
+              'numero': 1,
+              'versiculos': <dynamic>[
+                {'numero': 1, 'texto': 'No princípio, criou Deus o céu.'},
+                {'numero': 2, 'texto': 'A terra estava sem forma.'},
+              ],
+            },
+          ],
+        },
+      ];
+
+      final comNumeros = textoDeCapituloEmLivros(livros, 'Gênesis 1');
+      expect(comNumeros, contains('Versículo um.'));
+      expect(comNumeros, contains('Versículo dois.'));
+
+      final semNumeros = textoDeCapituloEmLivros(
+        livros,
+        'Gênesis 1',
+        anunciarVersiculos: false,
+      );
+      expect(semNumeros, isNot(contains('Versículo')));
+      expect(semNumeros, contains('No princípio, criou Deus o céu.'));
+    });
   });
 }

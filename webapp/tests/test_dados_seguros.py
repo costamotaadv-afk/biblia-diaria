@@ -173,3 +173,14 @@ def test_e16_texto_de_capitulo_em_livros():
         'Versículo dois. A terra, porém, estava sem forma e vazia.'
     )
     assert texto_de_capitulo_em_livros([LIVRO_GENESIS], 'Gênesis 99') is None
+
+def test_texto_de_capitulo_sem_anunciar_versiculos():
+    texto = texto_de_capitulo_em_livros([LIVRO_GENESIS], 'Gênesis 1')
+    assert 'Versículo um.' in texto
+    assert 'Versículo dois.' in texto
+
+    sem_numeros = texto_de_capitulo_em_livros(
+        [LIVRO_GENESIS], 'Gênesis 1', anunciar_versiculos=False
+    )
+    assert 'Versículo' not in sem_numeros
+    assert 'No princípio, criou Deus o céu e a terra.' in sem_numeros

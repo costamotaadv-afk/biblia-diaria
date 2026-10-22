@@ -31,3 +31,68 @@ String? erroIdAnuncioEmProducao({
   }
   return null;
 }
+
+/// Link público de download/uso do app, usado na mensagem de compartilhamento
+/// (caso SH1 da matriz de QA).
+///
+/// Deixe vazio até publicar o site ou a loja: com o link vazio, o botão de
+/// compartilhar fica oculto — nunca enviamos o usuário para um endereço morto.
+const String linkDownloadApp = '';
+
+/// True se [link] é um URL absoluto http/https com domínio (caso SH1).
+bool linkCompartilhamentoValido(String link) {
+  final uri = Uri.tryParse(link.trim());
+  return uri != null &&
+      (uri.scheme == 'https' || uri.scheme == 'http') &&
+      uri.host.isNotEmpty;
+}
+
+/// Mensagem pronta para o WhatsApp (ou qualquer rede escolhida na folha de
+/// compartilhamento). Função pura, testável sem widget/plugin.
+String mensagemCompartilhamento({String link = linkDownloadApp}) {
+  return '📖 *Bíblia Diária* — a Bíblia completa, gratuita e offline, '
+      'com leitura em voz alta.\n\nAcesse: $link';
+}
+
+/// Rodapé opcional de divulgação (link do app) usado nas mensagens de
+/// compartilhamento de versículo/capítulo/Salmo. Vazio enquanto o link não
+/// foi publicado ainda — nunca envia endereço morto (caso SH3 da matriz).
+String rodapeCompartilhamento(String link) {
+  return linkCompartilhamentoValido(link) ? '\n\n📲 Baixe grátis: $link' : '';
+}
+
+/// Mensagem para compartilhar um versículo (caso SV1): referência + texto.
+String mensagemCompartilharVersiculo({
+  required String referencia,
+  required String texto,
+  String link = linkDownloadApp,
+}) {
+  return '📖 *$referencia*\n\n“$texto”${rodapeCompartilhamento(link)}';
+}
+
+/// Mensagem para compartilhar um capítulo inteiro (caso SC1). A referência
+/// pode ser natural ("Salmo 23") ou padrão ("Gênesis 1") — quem chama decide.
+String mensagemCompartilharCapitulo({
+  required String referencia,
+  required String texto,
+  String link = linkDownloadApp,
+}) {
+  return '📖 *$referencia*\n\n$texto${rodapeCompartilhamento(link)}';
+}
+
+/// Mensagem para compartilhar a contextualização histórica de um Salmo
+/// (caso SS1): cabeçalho "Salmo N — título" + explicação + rodapé.
+String mensagemCompartilharSalmo({
+  required int numero,
+  required String titulo,
+  required String explicacao,
+  String link = linkDownloadApp,
+}) {
+  final cabecalho =
+      titulo.trim().isEmpty ? 'Salmo $numero' : 'Salmo $numero — $titulo';
+  final buffer = StringBuffer('📖 *$cabecalho*');
+  final explic = explicacao.trim();
+  if (explic.isNotEmpty) buffer.write('\n\n$explic');
+  buffer.write(rodapeCompartilhamento(link));
+  return buffer.toString();
+}

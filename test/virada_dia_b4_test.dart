@@ -68,7 +68,7 @@ void main() {
       const Offset(0, -220),
     );
     await tester.pump();
-    await tester.tap(find.text('Salvar versículo').last);
+    await tester.tap(find.text('Favoritar').last);
     await tester.pump();
     await aguardarWidget(tester, find.text('Levítico 1:1'));
     expect(find.text('Êxodo 1:1'), findsNothing);

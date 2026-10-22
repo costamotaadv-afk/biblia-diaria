@@ -108,3 +108,28 @@ def test_e12_corta_em_pontuacao():
     )
     for segmento in segmentos[:-1]:
         assert segmento[-1] in ('.', '!', '?', ';')
+
+def test_normalizar_texto_para_fala_abreviacoes():
+    from core.leitura_natural import normalizar_texto_para_fala
+
+    assert 'antes de Cristo' in normalizar_texto_para_fala('Reino de Judá, 586 a.C.')
+    assert 'depois de Cristo' in normalizar_texto_para_fala('ano 70 d.C.')
+    assert 'século' in normalizar_texto_para_fala('no séc. II')
+    assert 'capítulo 3' in normalizar_texto_para_fala('ver cap. 3')
+    assert 'versículo 4' in normalizar_texto_para_fala('conforme v. 4')
+
+
+def test_normalizar_texto_para_fala_ordinais_e_simbolos():
+    from core.leitura_natural import normalizar_texto_para_fala
+
+    assert 'primeiro dia' in normalizar_texto_para_fala('1º dia')
+    assert 'segunda viagem' in normalizar_texto_para_fala('2ª viagem')
+    assert '100 por cento' in normalizar_texto_para_fala('100%')
+
+
+def test_normalizar_texto_para_fala_milhares():
+    from core.leitura_natural import normalizar_texto_para_fala
+
+    assert 'mil homens' in normalizar_texto_para_fala('cerca de 1.000 homens')
+    assert 'três mil e quinhentos' in normalizar_texto_para_fala('3.500 talentos')
+    assert 'cem mil' in normalizar_texto_para_fala('100.000 pessoas')

@@ -189,4 +189,43 @@ void main() {
       }
     });
   });
+
+  group('Normalização adicional para fala natural', () {
+    test('abreviações comuns', () {
+      expect(
+        normalizarTextoParaFala('Reino de Judá, 586 a.C.'),
+        contains('antes de Cristo'),
+      );
+      expect(
+        normalizarTextoParaFala('ano 70 d.C.'),
+        contains('depois de Cristo'),
+      );
+      expect(normalizarTextoParaFala('no séc. II'), contains('século'));
+      expect(normalizarTextoParaFala('ver cap. 3'), contains('capítulo 3'));
+      expect(normalizarTextoParaFala('conforme v. 4'), contains('versículo 4'));
+    });
+
+    test('ordinais e símbolos', () {
+      expect(normalizarTextoParaFala('1º dia'), contains('primeiro dia'));
+      expect(normalizarTextoParaFala('2ª viagem'), contains('segunda viagem'));
+      expect(normalizarTextoParaFala('100%'), contains('100 por cento'));
+    });
+
+    test('milhares com separador de ponto', () {
+      expect(
+        normalizarTextoParaFala('cerca de 1.000 homens'),
+        contains('mil homens'),
+      );
+      expect(
+        normalizarTextoParaFala('3.500 talentos'),
+        contains('três mil e quinhentos'),
+      );
+      expect(normalizarTextoParaFala('100.000 pessoas'), contains('cem mil'));
+    });
+
+    test('texto vazio retorna vazio', () {
+      expect(normalizarTextoParaFala(''), '');
+      expect(normalizarTextoParaFala('   '), '');
+    });
+  });
 }

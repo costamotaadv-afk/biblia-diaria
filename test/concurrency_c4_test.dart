@@ -50,11 +50,11 @@ void main() {
     await tester.tap(find.text('Início').last);
     await tester.pump();
 
-    final botaoSalvar = find.widgetWithText(OutlinedButton, 'Salvar versículo');
+    final botaoSalvar = find.widgetWithText(TextButton, 'Favoritar');
     for (var i = 0; i < 50; i++) {
       await tester.pump();
       if (botaoSalvar.evaluate().isEmpty) continue;
-      final botao = tester.widget<OutlinedButton>(botaoSalvar);
+      final botao = tester.widget<TextButton>(botaoSalvar);
       if (botao.onPressed != null) break;
     }
 
@@ -62,9 +62,9 @@ void main() {
     await tester.ensureVisible(botaoSalvar);
     await tester.pumpAndSettle();
 
-    final botao = tester.widget<OutlinedButton>(botaoSalvar);
+    final botao = tester.widget<TextButton>(botaoSalvar);
     if (botao.onPressed == null) {
-      fail('Botão "Salvar versículo" não ficou habilitado a tempo.');
+      fail('Botão "Favoritar" não ficou habilitado a tempo.');
     }
   }
 
@@ -90,7 +90,7 @@ void main() {
       '(duplo-toque e toque único)', (tester) async {
     // ── Fase 1: duplo-toque (add + remove) → nada fica salvo ───────────────
     await abrirAteHomePronta(tester);
-    final botaoSalvar = find.widgetWithText(OutlinedButton, 'Salvar versículo');
+    final botaoSalvar = find.widgetWithText(TextButton, 'Favoritar');
 
     // Dois toques sem pump entre eles simulam chamadas concorrentes
     // disparadas antes de qualquer escrita concluir.
@@ -99,7 +99,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Estado em memória: voltou ao estado inicial (nada salvo).
-    expect(find.text('Salvar versículo'), findsOneWidget);
+    expect(find.text('Favoritar'), findsOneWidget);
     expect(find.text('Salvo'), findsNothing);
 
     // Estado em disco: nada persistido.

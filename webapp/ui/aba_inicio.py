@@ -4,11 +4,22 @@ import datetime
 
 import streamlit as st
 
+from core import config
 from core import data_source
 from core.dados_seguros import dias_desde_epoca, selecionar_versiculo_do_dia
 from core.formato_data import formatar_data_extenso
 from core.storage import alternar_lista
 from . import tts
+
+
+def _ir_para_aba(aba: str) -> None:
+    """Callback de navegação: troca a aba sem violar o estado do widget ``aba``.
+
+    Usado em ``st.button(..., on_click=...)``, que executa antes da reinicialização
+    do script; assim, atualizar ``st.session_state['aba']`` não dispara o
+    ``StreamlitAPIException`` de "widget já instanciado".
+    """
+    st.session_state['aba'] = aba
 
 
 def render():
@@ -54,9 +65,23 @@ def render():
         st.markdown(mensagem)
 
     c3, c4 = st.columns([1, 1])
-    if c3.button('📖 Ler a Bíblia', use_container_width=True):
-        st.session_state['aba'] = 'Bíblia'
-        st.rerun()
-    if c4.button('🔖 Salvos', use_container_width=True):
-        st.session_state['aba'] = 'Salvos'
-        st.rerun()
+    c3.button(
+        '📖 Ler a Bíblia',
+        use_container_width=True,
+        on_click=_ir_para_aba,
+        args=('Bíblia',),
+    )
+    c4.button(
+        '🔖 Salvos',
+        use_container_width=True,
+        on_click=_ir_para_aba,
+        args=('Salvos',),
+    )
+
+    if config.link_valido(config.LINK_DOWNLOAD):
+        st.link_button(
+            '📲 Compartilhar no WhatsApp',
+            config.url_whatsapp(config.mensagem_compartilhamento()),
+            type='primary',
+            width='stretch',
+        )

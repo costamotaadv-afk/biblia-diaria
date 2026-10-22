@@ -91,9 +91,9 @@ void main() {
       var desabilitado = false;
       for (var i = 0; i < 50; i++) {
         await tester.pump();
-        final botoes = find.widgetWithText(FilledButton, 'Ouvir versículo');
+        final botoes = find.widgetWithText(TextButton, 'Ouvir');
         if (botoes.evaluate().isNotEmpty) {
-          final botao = tester.widget<FilledButton>(botoes);
+          final botao = tester.widget<TextButton>(botoes);
           if (botao.onPressed == null) {
             desabilitado = true;
             break;

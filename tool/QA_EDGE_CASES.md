@@ -374,4 +374,91 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 
 > **Nota de infraestrutura de teste:** o `runAsync` usado para carregar assets via `rootBundle` deixa estado residual entre `testWidgets` do mesmo arquivo (o 2º teste falha ao abrir o app). Por isso, os arquivos com cenários de UI **combinam as fases em UM ÚNICO `testWidgets`** (ver `clipboard_b2_test.dart` e `concurrency_c4_test.dart`).
 
-> **Melhoria de voz (TTS):** velocidade de fala fixada em `0.36` (`_velocidadeFala` em `lib/main.dart`) — bem pausada, mais natural e ideal para idosos (60+). Seleção de voz prioriza neural/pt-BR feminina do motor nativo (Google TTS / AVSpeechSynthesizer), coberta por `test/tts_qualidade_test.dart`.
+> **Melhoria de voz (TTS):** velocidade de fala fixada em `0.48` (`_velocidadeFala` em `lib/main.dart`) — compasso calmo e respeitoso, ideal para meditação e idosos (60+). Seleção de voz descarta motores legados (pico/compact/espeak) e prioriza neural/wavenet/enhanced do motor nativo (Google TTS / AVSpeechSynthesizer), coberta por `test/tts_qualidade_test.dart` e `test/tts_filtro_vozes_test.dart`.
+
+---
+
+## 🚀 Compartilhamento (SH)
+
+**SH1. Compartilhar o app com mensagem pronta e link válido**
+- **Input:** usuário toca em "Compartilhar o app" (Flutter) / "📲 Compartilhar no WhatsApp" (web), com o link definido em `lib/config.dart` → `linkDownloadApp` / `webapp/core/config.py` → `LINK_DOWNLOAD`.
+- **Esperado:** a folha nativa abre com a mensagem contendo o nome do app e o link; no web, o botão abre `wa.me/?text=<mensagem>` sem copiar manual.
+- **Impacto se falhar:** viralização perdida; o usuário precisa copiar o link manualmente (exatamente o que a feature elimina).
+- **Status:** ✅ Coberto por `test/compartilhamento_test.dart`, `test/compartilhamento_widget_test.dart`, `webapp/tests/test_compartilhamento.py` e `test_app_smoke.py`.
+
+**SH2. Share indisponível → degrada para clipboard (nunca trava)**
+- **Input:** plugin de share ausente/falhando (ex.: Linux, web sem Web Share API).
+- **Esperado:** mensagem copiada para o clipboard + `SnackBar` "Mensagem copiada! Cole no WhatsApp para enviar." — sem exceção visível.
+- **Impacto se falhar:** botão "morto" (tocável mas sem efeito) violaria a Constituição III (feature indisponível deve degradar graciosamente).
+- **Status:** ✅ Coberto por `test/compartilhamento_widget_test.dart` (callback `false` → SnackBar).
+
+**SH3. Link vazio → botão oculto (não envia para endereço morto)**
+- **Input:** `linkDownloadApp`/`LINK_DOWNLOAD` vazio (estado atual até publicar o site/loja).
+- **Esperado:** o botão de compartilhar não é renderizado; o app segue normal.
+- **Impacto se falhar:** compartilhar um link 404 destruiria a confiança do usuário.
+- **Status:** ✅ Coberto por `test/compartilhamento_test.dart` (validação do link) e `test_app_smoke.py` (`test_botao_compartilhar_oculto_com_link_vazio`).
+
+
+
+---
+
+## 📤 Compartilhamento de conteúdo (SV/SC/SS)
+
+**SV1. Compartilhar versículo com referência e texto**
+- **Input:** usuário toca no ícone de compartilhar de um versículo (Flutter) / "📤 Compartilhar" (web).
+- **Esperado:** mensagem `📖 *Livro N:M*` + texto entre aspas (+ rodapé "Baixe grátis" quando o link existe).
+- **Impacto se falhar:** evangelização/viralização de um trecho específico perdida.
+- **Status:** ✅ `test/compartilhamento_test.dart` (SV1), `test/compartilhamento_conteudo_widget_test.dart`, `webapp/tests/test_compartilhamento.py`.
+
+**SC1. Compartilhar capítulo inteiro**
+- **Input:** toque em "Compartilhar capítulo" no cabeçalho (Flutter) / "📤 Compartilhar capítulo" (web). Salmos usa a referência natural "Salmo N"; demais livros usam "Livro N".
+- **Esperado:** mensagem com a referência e o capítulo completo (cada versículo "N. texto"). No Flutter, as ações do cabeçalho ficam em `Wrap` para nunca estourar a largura em 320 px (B12).
+- **Impacto se falhar:** compartilhar um capítulo truncado/ilegível.
+- **Status:** ✅ `test/compartilhamento_test.dart` (SC1), `test/compartilhamento_conteudo_widget_test.dart`, `webapp/tests/test_compartilhamento.py`.
+
+**SS1. Compartilhar contextualização histórica de um Salmo**
+- **Input:** toque em "Compartilhar Salmo" no painel de contexto histórico (Flutter) / "📤 Compartilhar Salmo" (web).
+- **Esperado:** mensagem `📖 *Salmo N — título*` + explicação histórica (+ rodapé quando o link existe).
+- **Impacto se falhar:** o diferencial educativo do app (contexto histórico) não se propaga.
+- **Status:** ✅ `test/compartilhamento_test.dart` (SS1), `webapp/tests/test_compartilhamento.py`.
+
+---
+
+## 🎨 Experiência de leitura (U1–U6)
+
+**U1. Tipografia de leitura — fonte serifada e altura de linha ≥ 1.5**
+- **Input:** texto de versículo e corpo de estudo/contexto.
+- **Esperado:** fonte serifada empacotada (`Lora`, `assets/fonts/`), altura de linha ≥ 1.5; títulos/UI em sans; nenhum download em runtime (100% offline).
+- **Impacto se falhar:** leitura contínua desconfortável para o público idoso; viola a Constituição II (offline).
+- **Status:** ✅ `test/tipografia_test.dart`.
+
+**U2. Paleta acolhedora — sem branco/preto puros e contraste ≥ 4.5:1**
+- **Input:** temas claro (`#FDFBF7`) e escuro (`#121212`).
+- **Esperado:** fundo creme/carvão (nunca `#FFFFFF`/`#000000`); pares de leitura (`onSurface/surface`, `primary/surface`, `onPrimary/primary`) com contraste WCAG AA ≥ 4.5:1.
+- **Impacto se falhar:** cansaço visual e/ou texto ilegível.
+- **Status:** ✅ `test/tema_test.dart`.
+
+**U3. Modo foco — barras somem ao rolar e voltam ao rolar para cima**
+- **Input:** rolagem na aba Bíblia.
+- **Esperado:** `SliverAppBar` (superior) e `NavigationBar`+FAB (inferior) somem ao rolar para baixo e reaparecem ao rolar para cima ou no topo; demais abas mantêm as barras fixas.
+- **Impacto se falhar:** tela poluída em leituras longas; ou perda de navegação (pior).
+- **Status:** ✅ `test/modo_foco_leitura_test.dart`.
+
+**U4. Seleção tátil de versículo — folha de ações rápidas**
+- **Input:** toque em um versículo na aba Bíblia.
+- **Esperado:** `showModalBottomSheet` com Ouvir/Copiar/Compartilhar/Favoritar (e Estudos, quando houver), alvos ≥ 56 dp; Favoritar persiste em `SharedPreferences`; Copiar usa clipboard com degradação graciosa.
+- **Impacto se falhar:** ações escondidas atrás de menus nativos difíceis de acionar (usuário idoso).
+- **Status:** ✅ `test/acoes_versiculo_widget_test.dart`.
+
+**U5. Alvos de toque ≥ 48 dp**
+- **Input:** navegação inferior e ações do cartão do Versículo do Dia.
+- **Esperado:** `NavigationBar` (76 dp) e ações do cartão (≥ 60 dp) com área de toque confortável.
+- **Impacto se falhar:** toques errados/reapertos — frustração do público-alvo.
+- **Status:** ✅ `test/alvos_toque_test.dart`.
+
+**U6. Escala de texto respeita o sistema (com teto)**
+- **Input:** `fonte_grande` do app + escala de acessibilidade do sistema.
+- **Esperado:** compõe os dois fatores (`fonteGrande ? 1.18 : 1.0` × sistema) com teto de 2.0 — nunca sobrescreve a acessibilidade do SO, nunca estoura 320 px.
+- **Impacto se falhar:** texto pequeno demais (ignora o SO) ou overflow em telas estreitas.
+- **Status:** ✅ `test/tema_test.dart` (`escalaDeTexto`) + `test/overflow_b12_test.dart` (1.18).
+

@@ -159,7 +159,7 @@ void main() {
           reason: 'C6 (UI): exceção ao abrir a aba Bíblia.',
         );
 
-        final lista = find.byType(ListView).first;
+        final lista = find.byType(CustomScrollView).first;
 
         // ---- Bloco 2: expansão sequencial dos 66 livros ----
         // Um livro por vez: expande (FutureBuilder → rootBundle → jsonDecode),
@@ -188,15 +188,15 @@ void main() {
           await tester.tap(find.text(nome));
           await tester.pump();
 
-          // Aguarda a decodificação real (runAsync) montar o primeiro
-          // versículo ("$nome 1:1"). Sem runAsync, o rootBundle nunca
+          // Aguarda a decodificação real (runAsync) montar o cabeçalho do
+          // primeiro capítulo ("Capítulo 1"). Sem runAsync, o rootBundle nunca
           // completaria no relógio fake e o teste daria timeout.
           //
-          // A renderização é lazy (ListView.builder): o conteúdo recém-expandido
-          // pode nascer fora da viewport — p.ex. o último livro (Apocalipse),
-          // cujo cabeçalho fica no rodapé da lista. Além de aguardar a carga,
-          // revela o trecho abaixo do cabeçalho para montar o marcador.
-          final marcador = find.text('$nome 1:1');
+          // A renderização é lazy: o conteúdo recém-expandido pode nascer fora
+          // da viewport — p.ex. o último livro (Apocalipse), cujo cabeçalho fica
+          // no rodapé da lista. Além de aguardar a carga, revela o trecho
+          // abaixo do cabeçalho para montar o marcador.
+          final marcador = find.text('Capítulo 1');
           var carregou = false;
           for (var tentativa = 0; tentativa < 300; tentativa++) {
             await tester.runAsync(
@@ -222,7 +222,7 @@ void main() {
                 '"Não foi possível carregar este livro.").',
           );
           expect(
-            find.text('$nome 1:1'),
+            find.text('Capítulo 1'),
             findsWidgets,
             reason: 'C6 (UI): conteúdo de $nome deve estar montado.',
           );

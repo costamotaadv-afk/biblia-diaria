@@ -168,3 +168,65 @@ def _ultimo_indice_de_pontuacao(s: str) -> int:
         if posicao > indice:
             indice = posicao
     return indice
+
+_ORDINAIS_MASC = [
+    'primeiro', 'segundo', 'terceiro', 'quarto', 'quinto',
+    'sexto', 'sétimo', 'oitavo', 'nono', 'décimo',
+]
+
+_ORDINAIS_FEM = [
+    'primeira', 'segunda', 'terceira', 'quarta', 'quinta',
+    'sexta', 'sétima', 'oitava', 'nona', 'décima',
+]
+
+
+def escrever_ordinal(numero, feminino=False) -> str:
+    """Converte um ordinal (1º, 2ª) para a forma por extenso."""
+    if not isinstance(numero, int) or numero < 1:
+        return 'número'
+    tabela = _ORDINAIS_FEM if feminino else _ORDINAIS_MASC
+    if numero <= 10:
+        return tabela[numero - 1]
+    return f'número {numero}'
+
+
+def escrever_numero_grande(com_separadores: str) -> str:
+    """Escreve por extenso um número com separador de milhar em ponto."""
+    try:
+        n = int(com_separadores.replace('.', ''))
+    except (ValueError, AttributeError):
+        return com_separadores
+    if n < 1000:
+        return escrever_numero(n)
+    if n < 1000000:
+        milhar, resto = divmod(n, 1000)
+        base = 'mil' if milhar == 1 else f'{escrever_numero(milhar)} mil'
+        return base if resto == 0 else f'{base} e {escrever_numero(resto)}'
+    return str(n)
+
+
+def normalizar_texto_para_fala(texto: str) -> str:
+    """Expande abreviações, ordinais, símbolos e milhares para fala natural."""
+    t = re.sub(
+        r'\ba\.\s*c\.?(?![A-Za-zÀ-ÿ0-9])', 'antes de Cristo', texto,
+        flags=re.IGNORECASE,
+    )
+    t = re.sub(
+        r'\bd\.\s*c\.?(?![A-Za-zÀ-ÿ0-9])', 'depois de Cristo', t,
+        flags=re.IGNORECASE,
+    )
+    t = re.sub(r'\bséc\.?(?![A-Za-zÀ-ÿ0-9])', 'século', t, flags=re.IGNORECASE)
+    t = re.sub(r'\bcap\.?(?![A-Za-zÀ-ÿ0-9])', 'capítulo', t, flags=re.IGNORECASE)
+    t = re.sub(r'\bv\.\s*(?=\d)', 'versículo ', t, flags=re.IGNORECASE)
+
+    t = re.sub(r'(\d+)\s*º', lambda m: escrever_ordinal(int(m.group(1)), False), t)
+    t = re.sub(r'(\d+)\s*ª', lambda m: escrever_ordinal(int(m.group(1)), True), t)
+
+    t = t.replace('%', ' por cento').replace('&', ' e ')
+    t = re.sub(
+        r'\b\d{1,3}(?:\.\d{3})+\b',
+        lambda m: escrever_numero_grande(m.group(0)),
+        t,
+    )
+    return re.sub(r'\s+', ' ', t).strip()
+

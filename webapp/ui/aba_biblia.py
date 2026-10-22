@@ -3,6 +3,7 @@
 import streamlit as st
 
 from core import dados_seguros as ds
+from core import config
 from core import data_source
 from core.catalogo_estudos import recursos_aplicaveis
 from core.contexto_historico import contexto_do_salmo
@@ -57,8 +58,8 @@ def render():
 
     lento = st.session_state['tts_lento']
 
-    # Ações de versículo (selectbox + Ouvir/Salvar).
-    c_v, c_o, c_s = st.columns([1.8, 1, 1])
+    # Ações de versículo (selectbox + Ouvir/Salvar/Compartilhar).
+    c_v, c_o, c_s, c_sh = st.columns([1.8, 1, 1, 1.3])
     with c_v:
         if versiculos:
             idx_vers = st.selectbox(
@@ -81,6 +82,35 @@ def render():
         if st.button('❤️ Salvo' if fav_v else '❤️ Salvar', key='salvar_vers', disabled=not versiculos, use_container_width=True):
             alternar_lista('favoritos_versiculos', chave_versiculo)
             st.rerun()
+    with c_sh:
+        if versiculos:
+            st.link_button(
+                '📤 Compartilhar',
+                config.url_whatsapp(
+                    config.mensagem_versiculo(
+                        chave_versiculo, vers.get('texto') or ''
+                    )
+                ),
+                type='secondary',
+                width='stretch',
+            )
+
+    # Compartilhar capítulo inteiro (oculto se sem versículos).
+    if versiculos:
+        referencia_capitulo = (
+            f'Salmo {numero_cap}' if nome == 'Salmos' else chave_capitulo
+        )
+        texto_capitulo = '\n'.join(
+            f'{v.get("numero")}. {v.get("texto")}' for v in versiculos
+        )
+        st.link_button(
+            '📤 Compartilhar capítulo',
+            config.url_whatsapp(
+                config.mensagem_capitulo(referencia_capitulo, texto_capitulo)
+            ),
+            type='secondary',
+            width='stretch',
+        )
 
     # Ações de capítulo.
     c1, c2, c3, c4 = st.columns(4)

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -12,12 +13,15 @@ import 'cache_contexto.dart';
 import 'cache_estudos.dart';
 import 'cache_livros.dart';
 import 'catalogo_estudos.dart';
+import 'compartilhamento.dart';
 import 'contexto_historico.dart';
 import 'config.dart';
 import 'dados_seguros.dart';
 import 'leitura_natural.dart';
 import 'platform_support.dart';
+import 'tema.dart';
 import 'widgets/banner_anuncio.dart';
+import 'widgets/cartao_versiculo_dia.dart';
 import 'widgets/painel_contexto_historico.dart';
 import 'widgets/painel_estudos.dart';
 import 'widgets/tela_contexto_historico.dart';
@@ -31,34 +35,22 @@ Future<void> main() async {
   runApp(const BibliaApp());
 }
 
-class VozTts {
-  final String id;
-  final String name;
-  final String locale;
-  final String gender;
-
-  const VozTts({
-    required this.id,
-    required this.name,
-    required this.locale,
-    required this.gender,
-  });
-
-  String get label {
-    final generoLegivel = gender.contains('male')
-        ? 'Masculina'
-        : gender.contains('female')
-            ? 'Feminina'
-            : 'Neutra';
-    return '$name ($locale, $generoLegivel)';
-  }
-}
-
 class BibliaApp extends StatefulWidget {
   /// Relógio injetável para testes de virada de dia (caso B4 de QA).
   final DateTime Function()? relogio;
 
-  const BibliaApp({super.key, this.relogio});
+  /// Link usado na mensagem de compartilhamento (vazio oculta o botão — SH1).
+  final String linkCompartilhamento;
+
+  /// Compartilhador injetável para testes; o padrão usa a folha nativa.
+  final Future<bool> Function(String texto, Rect? origem)? compartilhar;
+
+  const BibliaApp({
+    super.key,
+    this.relogio,
+    this.linkCompartilhamento = linkDownloadApp,
+    this.compartilhar,
+  });
 
   @override
   State<BibliaApp> createState() => _BibliaAppState();
@@ -95,54 +87,20 @@ class _BibliaAppState extends State<BibliaApp> {
     await prefs.setBool('fonte_grande', valor);
   }
 
-  /// Cor de destaque (dourado suave, remete a enfeite/borda de Bíblia).
-  static const Color _dourado = Color(0xFFB49A00);
-
-  /// Monta o tema (claro ou escuro) com uma paleta coerente, pensada para
-  /// boa legibilidade de pessoas idosas: contraste alto e destaques quentes.
-  ThemeData _construirTema(Brightness brightness) {
-    final esquema = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF3F51B5), // índigo
-      brightness: brightness,
-      secondary: _dourado,
-    );
-
-    final base = ThemeData(
-      useMaterial3: true,
-      colorScheme: esquema,
-      brightness: brightness,
-    );
-
-    // Ajustes de tipografia para legibilidade em telas de celular.
-    return base.copyWith(
-      textTheme: base.textTheme.copyWith(
-        headlineSmall: base.textTheme.headlineSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
-        titleLarge: base.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
-        titleMedium: base.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      appBarTheme: base.appBarTheme.copyWith(
-        centerTitle: true,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Bíblia Diária',
       debugShowCheckedModeBanner: false,
       themeMode: temaEscuro ? ThemeMode.dark : ThemeMode.light,
-      theme: _construirTema(Brightness.light),
-      darkTheme: _construirTema(Brightness.dark),
+      theme: construirTema(Brightness.light),
+      darkTheme: construirTema(Brightness.dark),
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
-        final escala = fonteGrande ? 1.18 : 1.0;
+        final escala = escalaDeTexto(
+          fonteGrande: fonteGrande,
+          escalaSistema: mediaQuery.textScaler.scale(1.0),
+        );
         return MediaQuery(
           data: mediaQuery.copyWith(textScaler: TextScaler.linear(escala)),
           child: child ?? const SizedBox.shrink(),
@@ -154,6 +112,8 @@ class _BibliaAppState extends State<BibliaApp> {
         onToggleTema: _atualizarTema,
         fonteGrande: fonteGrande,
         onToggleFonteGrande: _atualizarFonteGrande,
+        linkCompartilhamento: widget.linkCompartilhamento,
+        compartilhar: widget.compartilhar,
       ),
     );
   }
@@ -167,6 +127,12 @@ class TelaPrincipal extends StatefulWidget {
   final bool fonteGrande;
   final ValueChanged<bool> onToggleFonteGrande;
 
+  /// Link usado na mensagem de compartilhamento (vazio oculta o botão — SH1).
+  final String linkCompartilhamento;
+
+  /// Compartilhador injetável para testes; o padrão usa a folha nativa.
+  final Future<bool> Function(String texto, Rect? origem)? compartilhar;
+
   const TelaPrincipal({
     super.key,
     this.relogio,
@@ -174,6 +140,8 @@ class TelaPrincipal extends StatefulWidget {
     required this.onToggleTema,
     required this.fonteGrande,
     required this.onToggleFonteGrande,
+    this.linkCompartilhamento = linkDownloadApp,
+    this.compartilhar,
   });
 
   @override
@@ -182,6 +150,9 @@ class TelaPrincipal extends StatefulWidget {
 
 class _TelaPrincipalState extends State<TelaPrincipal> {
   int aba = 0;
+  // Visibilidade das barras na aba Bíblia (modo foco): somem ao rolar para
+  // baixo e reaparecem ao rolar para cima (item 5 do briefing de UX).
+  bool _barrasVisiveis = true;
   // Carregamento sob demanda: índice leve + mensagens, e cada livro só quando
   // o usuário o abre. Evita baixar os ~13MB todos de uma vez (crítico na web).
   List<Map<String, dynamic>> _indice = [];
@@ -218,7 +189,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   // Fila de segmentos pendentes de fala (capítulos gigantes, E12). O completion
   // handler consome um por vez para o engine nunca truncar silenciosamente.
   final List<String> _filaFala = [];
-  List<VozTts> _vozesDisponiveis = [];
+  List<VozDeLeitura> _vozesDisponiveis = [];
   String? _vozSelecionadaId;
   String? _vozMasculinaId;
   String? _vozFemininaId;
@@ -527,6 +498,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                 ttsDisponivel: _ttsDisponivel,
                 onOuvir: _falarContexto,
                 onNavegarReferencia: _irParaReferencia,
+                onCompartilhar: _compartilharContexto,
               ),
             ),
           ),
@@ -563,6 +535,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           ttsDisponivel: _ttsDisponivel,
           onOuvir: _falarContexto,
           onNavegarReferencia: _irParaReferencia,
+          onCompartilhar: _compartilharContexto,
         ),
       ),
     );
@@ -701,10 +674,10 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   /// Velocidade da fala em voz alta.
   ///
   /// 1.0 é a velocidade normal do motor nativo (Google TTS no Android,
-  /// AVSpeechSynthesizer no iOS). Para o público sênior (60+), reduzimos para
-  /// 0.36 — dentro da faixa recomendada de 0.33 a 0.38 — o que torna a leitura
-  /// bíblica bem mais lenta, pausada e fácil de acompanhar, sem soar robotizada.
-  static const double _velocidadeFala = 0.36;
+  /// AVSpeechSynthesizer no iOS). Reduzimos para 0.48 — um compasso mais calmo
+  /// e respeitoso, ideal para meditação e para facilitar a compreensão de
+  /// idosos (60+), sem soar robotizada.
+  static const double _velocidadeFala = 0.48;
 
   /// Aplica os parâmetros de fala pensados para idosos: velocidade reduzida,
   /// volume máximo e tom neutro. É reaplicado após `setVoice` porque alguns
@@ -725,124 +698,53 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     final prefs = await SharedPreferences.getInstance();
     final vozSalva = prefs.getString('voz_tts_id');
     final voices = await _tts.getVoices;
+
+    // Filtragem rigorosa delegada às funções puras de leitura_natural.dart:
+    // descarta motores legados (pico/compact/espeak) e ordena as vozes pt da
+    // melhor para a pior, priorizando neural/wavenet/enhanced.
+    var vozes = <VozDeLeitura>[];
     if (voices is List) {
-      final vozes = <VozTts>[];
+      vozes = filtrarVozesParaLeitura(voices);
+    }
 
-      for (final voiceRaw in voices) {
-        if (voiceRaw is Map) {
-          final locale = '${voiceRaw['locale'] ?? ''}';
-          final localeLower = locale.toLowerCase();
-          if (!localeLower.startsWith('pt')) {
-            continue;
-          }
+    // Escolhe a voz salva (se ainda existir) ou a melhor pt-BR feminina,
+    // depois a masculina — sempre entre as vozes já filtradas.
+    final escolhida = selecionarVozParaLeitura(vozes, vozSalva);
 
-          final name = '${voiceRaw['name'] ?? ''}'.trim();
-          if (name.isEmpty) {
-            continue;
-          }
-
-          final gender = '${voiceRaw['gender'] ?? ''}'.toLowerCase();
-          final id = '$name|$locale';
-          vozes.add(
-            VozTts(
-              id: id,
-              name: name,
-              locale: locale,
-              gender: gender,
-            ),
-          );
-        }
+    for (final voz in vozes) {
+      if (voz.locale.toLowerCase().contains('pt-br') &&
+          voz.gender.contains('male')) {
+        _vozMasculinaId = voz.id;
+        break;
       }
-
-      // Pontua cada voz: vozes neurais/naturais ficam no topo da lista,
-      // evitando selecionar a voz padrão robotizada do dispositivo.
-      int pontuacao(VozTts voz) {
-        final nome = voz.name.toLowerCase();
-        final loc = voz.locale.toLowerCase();
-        var pts = 0;
-        if (loc.contains('pt-br')) pts += 100;
-        if (loc.contains('pt-pt')) pts += 60;
-        // Marcadores comuns de vozes de alta qualidade (Google/Android).
-        if (nome.contains('neural') || nome.contains('enhanced')) pts += 80;
-        if (nome.contains('online') ||
-            nome.contains('wavenet') ||
-            nome.contains('high') ||
-            nome.contains('quality') ||
-            nome.contains('studio')) {
-          pts += 50;
-        }
-        // Preferência por feminina na leitura da Bíblia (mais suave), mas não
-        // obrigatório — o usuário pode trocar nos Ajustes.
-        if (voz.gender.contains('female')) pts += 10;
-        return pts;
+    }
+    for (final voz in vozes) {
+      if (voz.locale.toLowerCase().contains('pt-br') &&
+          voz.gender.contains('female')) {
+        _vozFemininaId = voz.id;
+        break;
       }
+    }
 
-      vozes.sort((a, b) {
-        final cmp = pontuacao(b).compareTo(pontuacao(a));
-        if (cmp != 0) return cmp;
-        return a.label.compareTo(b.label);
+    if (mounted) {
+      setState(() {
+        _vozesDisponiveis = vozes;
+        _vozSelecionadaId = escolhida?.id;
       });
-      VozTts? escolhida;
+    }
 
-      if (vozes.isNotEmpty) {
-        if (vozSalva != null) {
-          for (final voz in vozes) {
-            if (voz.id == vozSalva) {
-              escolhida = voz;
-              break;
-            }
-          }
-        }
-
-        for (final voz in vozes) {
-          if (voz.locale.toLowerCase().contains('pt-br') &&
-              voz.gender.contains('male')) {
-            _vozMasculinaId = voz.id;
-            break;
-          }
-        }
-
-        for (final voz in vozes) {
-          if (voz.locale.toLowerCase().contains('pt-br') &&
-              voz.gender.contains('female')) {
-            _vozFemininaId = voz.id;
-            break;
-          }
-        }
-
-        escolhida ??= vozes.firstWhere(
-          (voz) =>
-              voz.locale.toLowerCase().contains('pt-br') &&
-              voz.gender.contains('female'),
-          orElse: () => vozes.firstWhere(
-            (voz) =>
-                voz.locale.toLowerCase().contains('pt-br') &&
-                voz.gender.contains('male'),
-            orElse: () => vozes.first,
-          ),
-        );
-      }
-
-      if (mounted) {
-        setState(() {
-          _vozesDisponiveis = vozes;
-          _vozSelecionadaId = escolhida?.id;
+    if (escolhida != null) {
+      try {
+        await _tts.setVoice({
+          'name': escolhida.name,
+          'locale': escolhida.locale,
         });
+        // Reaplica a velocidade/tom após trocar de voz (alguns motores resetam).
+        await _aplicarParametrosDeFala();
+      } catch (_) {
+        // Web/browsers podem não suportar setVoice; segue com a voz padrão.
       }
-
-      if (escolhida != null) {
-        try {
-          await _tts.setVoice({
-            'name': escolhida.name,
-            'locale': escolhida.locale,
-          });
-          // Reaplica a velocidade/tom após trocar de voz (alguns motores resetam).
-          await _aplicarParametrosDeFala();
-        } catch (_) {
-          // Web/browsers podem não suportar setVoice; segue com a voz padrão.
-        }
-        await prefs.setString('voz_tts_id', escolhida.id);
-      }
+      await prefs.setString('voz_tts_id', escolhida.id);
     }
 
     _tts.setStartHandler(() {
@@ -913,7 +815,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 
   Future<void> _selecionarVozPorId(String? vozId) async {
     if (vozId == null) return;
-    VozTts? escolhida;
+    VozDeLeitura? escolhida;
     for (final voz in _vozesDisponiveis) {
       if (voz.id == vozId) {
         escolhida = voz;
@@ -1185,6 +1087,26 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     );
   }
 
+  /// Esconde/revela a barra inferior (e o FAB) conforme a direção do rolar na
+  /// aba Bíblia. A barra superior é tratada pelo `SliverAppBar` da leitura.
+  bool _aoRolar(ScrollNotification notificacao) {
+    if (aba != 1 || notificacao.depth != 0) return false;
+    if (notificacao is UserScrollNotification) {
+      final descendo = notificacao.direction == ScrollDirection.reverse;
+      final subindo = notificacao.direction == ScrollDirection.forward;
+      if (descendo && _barrasVisiveis) {
+        setState(() => _barrasVisiveis = false);
+      } else if (subindo && !_barrasVisiveis) {
+        setState(() => _barrasVisiveis = true);
+      }
+    } else if (notificacao is ScrollEndNotification &&
+        notificacao.metrics.pixels <= 0 &&
+        !_barrasVisiveis) {
+      setState(() => _barrasVisiveis = true);
+    }
+    return false;
+  }
+
   Widget _montarTelaInicio(Map<String, String> conteudo, String hoje) {
     final referencia = conteudo['referencia'] ?? '';
     final versiculo = conteudo['versiculo'] ?? '';
@@ -1205,106 +1127,27 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
             ),
           ),
           const SizedBox(height: 20),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                colors: [
-                  Theme.of(context).colorScheme.primaryContainer,
-                  Theme.of(context).colorScheme.secondaryContainer,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.auto_stories_rounded,
-                  size: 44,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Versículo do Dia',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+          CartaoVersiculoDia(
+            versiculo: versiculo,
+            referencia: referencia,
+            isFavorito: isFav,
+            ttsDisponivel: _ttsDisponivel,
+            onOuvir: (referencia.isEmpty || !_ttsDisponivel)
+                ? null
+                : () => _falarVersiculo(referencia, versiculo),
+            onFavoritar: referencia.isEmpty
+                ? null
+                : () => _toggleFavoritoVersiculo(referencia),
+            onCompartilhar: referencia.isEmpty
+                ? null
+                : (ctx) => _compartilharConteudo(
+                      ctx,
+                      mensagemCompartilharVersiculo(
+                        referencia: referencia,
+                        texto: versiculo,
+                        link: widget.linkCompartilhamento,
                       ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '"$versiculo"',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 19,
-                    height: 1.55,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  referencia,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final botaoOuvir = FilledButton.icon(
-                      onPressed: (referencia.isEmpty || !_ttsDisponivel)
-                          ? null
-                          : () => _falarVersiculo(referencia, versiculo),
-                      icon: const Icon(Icons.volume_up),
-                      label: const Text('Ouvir versículo'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
-                      ),
-                    );
-                    final botaoSalvar = OutlinedButton.icon(
-                      onPressed: referencia.isEmpty
-                          ? null
-                          : () => _toggleFavoritoVersiculo(referencia),
-                      icon:
-                          Icon(isFav ? Icons.favorite : Icons.favorite_border),
-                      label: Text(isFav ? 'Salvo' : 'Salvar versículo'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
-                      ),
-                    );
-
-                    // Em telas muito estreitas, empilha os botões para evitar overflow.
-                    if (constraints.maxWidth < 420) {
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(width: double.infinity, child: botaoOuvir),
-                          const SizedBox(height: 10),
-                          SizedBox(width: double.infinity, child: botaoSalvar),
-                        ],
-                      );
-                    }
-
-                    return Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      alignment: WrapAlignment.center,
-                      children: [botaoOuvir, botaoSalvar],
-                    );
-                  },
-                ),
-              ],
-            ),
+                    ),
           ),
           const SizedBox(height: 24),
           Card(
@@ -1380,9 +1223,80 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               ),
             ],
           ),
+          if (linkCompartilhamentoValido(widget.linkCompartilhamento)) ...[
+            const SizedBox(height: 12),
+            Builder(
+              builder: (contextoDoBotao) => SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _compartilharApp(contextoDoBotao),
+                  icon: const Icon(Icons.share_rounded),
+                  label: const Text('Compartilhar o app'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  /// Compartilha o app na folha nativa com a mensagem pronta (SH1). Se o
+  /// plugin falhar ou não existir, copia a mensagem e orienta colar no
+  /// WhatsApp (SH2) — nunca deixa o botão "morto" nem trava o app.
+  Future<void> _compartilharApp(BuildContext contextoDoBotao) {
+    return _compartilharConteudo(
+      contextoDoBotao,
+      mensagemCompartilhamento(link: widget.linkCompartilhamento),
+    );
+  }
+
+  /// Compartilha [texto] pela folha nativa, com a origem no botão tocado. Se o
+  /// compartilhamento falhar ou estiver indisponível, copia o texto e orienta
+  /// colar no WhatsApp (degradação graciosa — SH2). Base única para todos os
+  /// botões de compartilhar (app, versículo, capítulo e Salmo).
+  Future<void> _compartilharConteudo(
+    BuildContext contextoDoBotao,
+    String texto,
+  ) async {
+    final box = contextoDoBotao.findRenderObject() as RenderBox?;
+    final origem = box == null
+        ? null
+        : box.localToGlobal(Offset.zero) & box.size;
+
+    final compartilhar = widget.compartilhar ?? compartilharTexto;
+    final tratado = await compartilhar(texto, origem);
+    if (!mounted) return;
+
+    if (!tratado) {
+      await Clipboard.setData(ClipboardData(text: texto));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mensagem copiada! Cole no WhatsApp para enviar.'),
+        ),
+      );
+    }
+  }
+
+  /// Compartilha a contextualização histórica de um Salmo (SS1).
+  Future<void> _compartilharContexto(
+    BuildContext contextoDoBotao,
+    ContextoSalmo contexto,
+  ) {
+    final mensagem = mensagemCompartilharSalmo(
+      numero: contexto.numero,
+      titulo: contexto.titulo,
+      explicacao: contexto.explicacao,
+      link: widget.linkCompartilhamento,
+    );
+    return _compartilharConteudo(contextoDoBotao, mensagem);
   }
 
   Widget _montarTelaLeitura() {
@@ -1420,28 +1334,55 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           _indiceLinhaAlvo = linhas.length;
         }
         linhas.add(
-          () => _cabecalhoCapitulo(nomeLivro, numeroCapitulo, chaveCapitulo),
+          () => _cabecalhoCapitulo(
+            nomeLivro,
+            numeroCapitulo,
+            chaveCapitulo,
+            versiculos,
+          ),
         );
         for (final vRaw in versiculos.whereType<Map>()) {
           final versiculo = Map<String, dynamic>.from(vRaw);
           final numeroVersiculo = versiculo['numero'];
           final chaveVersiculo = '$nomeLivro $numeroCapitulo:$numeroVersiculo';
           final texto = '${versiculo['texto']}';
-          linhas.add(() => _linhaVersiculo(nomeLivro, chaveVersiculo, texto));
+          linhas.add(
+            () => _linhaVersiculo(
+              nomeLivro,
+              chaveVersiculo,
+              numeroVersiculo,
+              texto,
+            ),
+          );
         }
       }
     }
 
     _totalLinhasLeitura = linhas.length;
 
-    return ListView.builder(
+    return CustomScrollView(
       controller: _controleLeitura,
-      padding: const EdgeInsets.all(12),
       physics: const ClampingScrollPhysics(),
       dragStartBehavior: DragStartBehavior.down,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      itemCount: linhas.length,
-      itemBuilder: (context, i) => linhas[i](),
+      slivers: [
+        // Barra superior que some ao rolar para baixo e reaparece ao rolar
+        // para cima (modo foco na leitura — item 5 do briefing de UX).
+        const SliverAppBar(
+          floating: true,
+          snap: true,
+          pinned: false,
+          title: Text('Bíblia Diária'),
+          centerTitle: true,
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.all(12),
+          sliver: SliverList.builder(
+            itemCount: linhas.length,
+            itemBuilder: (context, i) => linhas[i](),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1483,13 +1424,26 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     );
   }
 
-  /// Cabeçalho de capítulo (mesmo visual do bloco antigo).
+  /// Cabeçalho de capítulo (mesmo visual do bloco antigo), agora com o botão
+  /// de compartilhar o capítulo inteiro (SC1). O título fica em uma linha e as
+  /// ações em outra (Wrap), para nunca estourar a largura em 320 px (B12).
   Widget _cabecalhoCapitulo(
     String nomeLivro,
     dynamic numeroCapitulo,
     String chaveCapitulo,
+    List<dynamic> versiculos,
   ) {
     final capFav = favoritosCapitulos.contains(chaveCapitulo);
+    final linhasTexto = <String>[];
+    for (final vRaw in versiculos.whereType<Map>()) {
+      final v = Map<String, dynamic>.from(vRaw);
+      linhasTexto.add('${v['numero']}. ${v['texto']}');
+    }
+    final textoCapitulo = linhasTexto.join('\n');
+    final referencia = nomeLivro == 'Salmos'
+        ? 'Salmo $numeroCapitulo'
+        : '$nomeLivro $numeroCapitulo';
+
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1503,88 +1457,237 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                 color: Theme.of(context).colorScheme.primary, width: 1.5)
             : null,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Text(
-              'Capítulo $numeroCapitulo',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
+          Text(
+            'Capítulo $numeroCapitulo',
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
-          if (_temEstudos(chaveCapitulo, nomeLivro))
-            IconButton(
-              tooltip: 'Estudos do capítulo',
-              icon: const Icon(Icons.auto_stories_outlined),
-              onPressed: () =>
-                  _abrirEstudosDaReferencia(chaveCapitulo, nomeLivro),
-            ),
-          if (_temContexto(chaveCapitulo, nomeLivro))
-            IconButton(
-              tooltip: 'Contexto Histórico',
-              icon: const Icon(Icons.history_edu),
-              onPressed: () {
-                final numero = _numeroSalmoDaReferencia(chaveCapitulo);
-                if (numero != null) _abrirContextoDoSalmo(numero);
-              },
-            ),
-          IconButton(
-            tooltip: 'Ouvir capítulo',
-            onPressed:
-                _ttsDisponivel ? () => _falarCapitulo(chaveCapitulo) : null,
-            icon: const Icon(Icons.volume_up_outlined),
-          ),
-          IconButton(
-            tooltip: capFav ? 'Remover capítulo salvo' : 'Salvar capítulo',
-            onPressed: () => _toggleFavoritoCapitulo(chaveCapitulo),
-            icon: Icon(capFav ? Icons.bookmark : Icons.bookmark_border),
+          const SizedBox(height: 4),
+          Wrap(
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 2,
+            children: [
+              if (_temEstudos(chaveCapitulo, nomeLivro))
+                IconButton(
+                  tooltip: 'Estudos do capítulo',
+                  icon: const Icon(Icons.auto_stories_outlined),
+                  onPressed: () =>
+                      _abrirEstudosDaReferencia(chaveCapitulo, nomeLivro),
+                ),
+              if (_temContexto(chaveCapitulo, nomeLivro))
+                IconButton(
+                  tooltip: 'Contexto Histórico',
+                  icon: const Icon(Icons.history_edu),
+                  onPressed: () {
+                    final numero = _numeroSalmoDaReferencia(chaveCapitulo);
+                    if (numero != null) _abrirContextoDoSalmo(numero);
+                  },
+                ),
+              IconButton(
+                tooltip: 'Ouvir capítulo',
+                onPressed:
+                    _ttsDisponivel ? () => _falarCapitulo(chaveCapitulo) : null,
+                icon: const Icon(Icons.volume_up_outlined),
+              ),
+              IconButton(
+                tooltip: capFav ? 'Remover capítulo salvo' : 'Salvar capítulo',
+                onPressed: () => _toggleFavoritoCapitulo(chaveCapitulo),
+                icon: Icon(capFav ? Icons.bookmark : Icons.bookmark_border),
+              ),
+              Builder(
+                builder: (ctx) => IconButton(
+                  tooltip: 'Compartilhar capítulo',
+                  icon: const Icon(Icons.share_outlined),
+                  onPressed: textoCapitulo.isEmpty
+                      ? null
+                      : () => _compartilharConteudo(
+                            ctx,
+                            mensagemCompartilharCapitulo(
+                              referencia: referencia,
+                              texto: textoCapitulo,
+                              link: widget.linkCompartilhamento,
+                            ),
+                          ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  /// Linha de versículo (mesmo visual do bloco antigo).
+  /// Linha de versículo: número em destaque + texto serifado. Um toque abre a
+  /// folha de ações (ouvir, copiar, compartilhar, favoritar) — em vez de
+  /// ícones apertados no trailing, que confundiam e estouravam em 320 px.
   Widget _linhaVersiculo(
     String nomeLivro,
     String chaveVersiculo,
+    dynamic numeroVersiculo,
     String texto,
   ) {
     final isFav = favoritosVersiculos.contains(chaveVersiculo);
-    return ListTile(
-      minVerticalPadding: 10,
-      title: Text(
-        chaveVersiculo,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-      ),
-      subtitle: Text(texto),
-      trailing: Wrap(
-        spacing: 2,
-        children: [
-          if (_temEstudos(chaveVersiculo, nomeLivro))
-            IconButton(
-              tooltip: 'Estudos do versículo',
-              icon: const Icon(Icons.auto_stories_outlined),
-              onPressed: () =>
-                  _abrirEstudosDaReferencia(chaveVersiculo, nomeLivro),
-            ),
-          IconButton(
-            tooltip: 'Ouvir versículo',
-            icon: const Icon(Icons.volume_up),
-            onPressed: _ttsDisponivel
-                ? () => _falarVersiculo(chaveVersiculo, texto)
-                : null,
+    final esquema = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: 'Versículo $numeroVersiculo. Toque para ouvir, copiar, '
+          'compartilhar ou favoritar.',
+      child: ListTile(
+        onTap: () => _abrirAcoesVersiculo(nomeLivro, chaveVersiculo, texto),
+        minVerticalPadding: 12,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        title: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: '$numeroVersiculo ',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: esquema.primary,
+                ),
+              ),
+              TextSpan(text: texto),
+            ],
           ),
-          IconButton(
-            tooltip: isFav ? 'Remover dos salvos' : 'Salvar versículo',
-            icon: Icon(
-              isFav ? Icons.favorite : Icons.favorite_border,
-              color: isFav ? Colors.redAccent : null,
-            ),
-            onPressed: () => _toggleFavoritoVersiculo(chaveVersiculo),
-          ),
-        ],
+          style: estiloVersiculo.copyWith(color: esquema.onSurface),
+        ),
+        trailing: isFav
+            ? Icon(Icons.bookmark, size: 20, color: esquema.secondary)
+            : null,
       ),
     );
+  }
+
+  /// Abre a folha de ações rápidas de um versículo (ouvir, copiar,
+  /// compartilhar, favoritar — e estudos, quando houver), com alvos de toque
+  /// largos. Substitui os menus de contexto nativos, difíceis de acionar.
+  Future<void> _abrirAcoesVersiculo(
+    String nomeLivro,
+    String chaveVersiculo,
+    String texto,
+  ) async {
+    if (!mounted) return;
+    final telaContext = context; // contexto estável do app, p/ compartilhar.
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final salvo = favoritosVersiculos.contains(chaveVersiculo);
+            final esquema = Theme.of(context).colorScheme;
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      chaveVersiculo,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      texto,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: estiloVersiculo.copyWith(
+                        color: esquema.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_temEstudos(chaveVersiculo, nomeLivro))
+                      _AcaoFolha(
+                        icon: Icons.auto_stories_outlined,
+                        label: 'Estudos do versículo',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _abrirEstudosDaReferencia(chaveVersiculo, nomeLivro);
+                        },
+                      ),
+                    _AcaoFolha(
+                      icon: Icons.volume_up_rounded,
+                      label: 'Ouvir',
+                      onTap: _ttsDisponivel
+                          ? () {
+                              Navigator.of(context).pop();
+                              _falarVersiculo(chaveVersiculo, texto);
+                            }
+                          : null,
+                    ),
+                    _AcaoFolha(
+                      icon: Icons.copy_rounded,
+                      label: 'Copiar',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _copiarVersiculo(chaveVersiculo, texto);
+                      },
+                    ),
+                    _AcaoFolha(
+                      icon: Icons.share_rounded,
+                      label: 'Compartilhar',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _compartilharConteudo(
+                          telaContext,
+                          mensagemCompartilharVersiculo(
+                            referencia: chaveVersiculo,
+                            texto: texto,
+                            link: widget.linkCompartilhamento,
+                          ),
+                        );
+                      },
+                    ),
+                    _AcaoFolha(
+                      icon:
+                          salvo ? Icons.star_rounded : Icons.star_outline_rounded,
+                      label: salvo ? 'Remover dos salvos' : 'Favoritar',
+                      onTap: () {
+                        _toggleFavoritoVersiculo(chaveVersiculo);
+                        setSheetState(() {});
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Copia o versículo (referência + texto) para a área de transferência, com
+  /// degradação graciosa em plataformas sem clipboard (caso B2 de QA).
+  Future<void> _copiarVersiculo(String referencia, String texto) async {
+    var copiou = false;
+    try {
+      await Clipboard.setData(ClipboardData(text: '$referencia\n$texto'));
+      copiou = true;
+    } catch (_) {
+      copiou = false;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            copiou
+                ? 'Versículo copiado!'
+                : 'Não foi possível copiar. Copie manualmente.',
+          ),
+        ),
+      );
   }
 
   Widget _montarTelaEstudos() {
@@ -2331,12 +2434,17 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bíblia Diária'),
-        centerTitle: true,
+      appBar: aba == 1
+          ? null
+          : AppBar(
+              title: const Text('Bíblia Diária'),
+              centerTitle: true,
+            ),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _aoRolar,
+        child: telas[aba],
       ),
-      body: telas[aba],
-      floatingActionButton: _leituraAtiva
+      floatingActionButton: (_leituraAtiva && _barrasVisiveis)
           ? FloatingActionButton(
               onPressed: _alternarPlayPause,
               tooltip: (_falando && !_pausado) ? 'Pausar' : 'Continuar',
@@ -2348,37 +2456,84 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               ),
             )
           : null,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: aba,
-        onDestinationSelected: (i) => setState(() => aba = i),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Início',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book_rounded),
-            label: 'Bíblia',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_stories_outlined),
-            selectedIcon: Icon(Icons.auto_stories),
-            label: 'Estudos',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bookmarks_outlined),
-            selectedIcon: Icon(Icons.bookmarks),
-            label: 'Salvos',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Ajustes',
-          ),
-        ],
+      bottomNavigationBar: AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        alignment: Alignment.topCenter,
+        child: _barrasVisiveis
+            ? NavigationBar(
+                selectedIndex: aba,
+                onDestinationSelected: (i) {
+                  setState(() {
+                    aba = i;
+                    _barrasVisiveis = true;
+                  });
+                },
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home_rounded),
+                    label: 'Início',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.menu_book_outlined),
+                    selectedIcon: Icon(Icons.menu_book_rounded),
+                    label: 'Bíblia',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.auto_stories_outlined),
+                    selectedIcon: Icon(Icons.auto_stories),
+                    label: 'Estudos',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.bookmarks_outlined),
+                    selectedIcon: Icon(Icons.bookmarks),
+                    label: 'Salvos',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(Icons.settings),
+                    label: 'Ajustes',
+                  ),
+                ],
+              )
+            : const SizedBox(width: double.infinity, height: 0),
+      ),
+    );
+  }
+}
+
+/// Ação da folha de ações do versículo: alvo largo com ícone + rótulo.
+class _AcaoFolha extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  const _AcaoFolha({
+    required this.icon,
+    required this.label,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final esquema = Theme.of(context).colorScheme;
+    final habilitado = onTap != null;
+    return ListTile(
+      onTap: onTap,
+      minVerticalPadding: 6,
+      leading: Icon(
+        icon,
+        color: habilitado ? esquema.primary : esquema.onSurfaceVariant,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: habilitado ? esquema.onSurface : esquema.onSurfaceVariant,
+        ),
       ),
     );
   }
