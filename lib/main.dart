@@ -19,6 +19,7 @@ import 'config.dart';
 import 'dados_seguros.dart';
 import 'leitura_natural.dart';
 import 'platform_support.dart';
+import 'progresso_leitura.dart';
 import 'tema.dart';
 import 'widgets/banner_anuncio.dart';
 import 'widgets/cartao_versiculo_dia.dart';
@@ -195,6 +196,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   bool _carregamentoInicial = true;
   Set<String> favoritosVersiculos = {};
   Set<String> favoritosCapitulos = {};
+  Set<String> capitulosLidos = {};
   Set<String> favoritosEstudos = {};
   List<RecursoEstudo> _indiceEstudos = [];
   // Estado de expansão da aba Bíblia. Um livro expandido vira linhas planas e
@@ -237,6 +239,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   Future<void> _escritaFavVersiculos = Future<void>.value();
   Future<void> _escritaFavCapitulos = Future<void>.value();
   Future<void> _escritaFavEstudos = Future<void>.value();
+  Future<void> _escritaCapLidos = Future<void>.value();
 
   @override
   void initState() {
@@ -315,6 +318,8 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           (prefs.getStringList('favoritos_versiculos') ?? []).toSet();
       favoritosCapitulos =
           (prefs.getStringList('favoritos_capitulos') ?? []).toSet();
+      capitulosLidos =
+          (prefs.getStringList('capitulos_lidos') ?? []).toSet();
       favoritosEstudos =
           (prefs.getStringList('favoritos_estudos') ?? []).toSet();
       _indiceEstudos = indiceEstudos;
@@ -1073,6 +1078,25 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     return _escritaFavCapitulos;
   }
 
+  Future<void> _toggleCapituloLido(String chave) async {
+    if (!mounted) return;
+    setState(() {
+      if (!capitulosLidos.remove(chave)) {
+        capitulosLidos.add(chave);
+      }
+    });
+    await _persistirCapitulosLidos();
+  }
+
+  Future<void> _persistirCapitulosLidos() {
+    final snapshot = capitulosLidos.toList();
+    _escritaCapLidos = _escritaCapLidos.then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('capitulos_lidos', snapshot);
+    });
+    return _escritaCapLidos;
+  }
+
   String _chaveCapitulo(String livroNome, dynamic numeroCapitulo) {
     return '$livroNome $numeroCapitulo';
   }
@@ -1137,6 +1161,52 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       setState(() => _barrasVisiveis = true);
     }
     return false;
+  }
+
+  /// Cartão de progresso de leitura (capítulos lidos × total da Bíblia).
+  Widget _cartaoProgresso() {
+    final total = totalDeCapitulos(_indice);
+    final lidos = contarCapitulosLidos(_indice, capitulosLidos);
+    final fracao = fracaoLida(_indice, capitulosLidos);
+    final percentual = (fracao * 100).round();
+    final esquema = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.insights_outlined, color: esquema.primary),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Progresso de leitura')),
+                Text(
+                  '$percentual%',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: esquema.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: fracao,
+              minHeight: 10,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$lidos de $total capítulos lidos',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _montarTelaInicio(Map<String, String> conteudo, String hoje) {
@@ -1221,7 +1291,9 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
+          _cartaoProgresso(),
+          const SizedBox(height: 20),
           const BannerAnuncio(),
           const SizedBox(height: 20),
           Row(
@@ -1466,6 +1538,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     List<dynamic> versiculos,
   ) {
     final capFav = favoritosCapitulos.contains(chaveCapitulo);
+    final capLido = capitulosLidos.contains(chaveCapitulo);
     final linhasTexto = <String>[];
     for (final vRaw in versiculos.whereType<Map>()) {
       final v = Map<String, dynamic>.from(vRaw);
@@ -1528,6 +1601,13 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                 tooltip: capFav ? 'Remover capítulo salvo' : 'Salvar capítulo',
                 onPressed: () => _toggleFavoritoCapitulo(chaveCapitulo),
                 icon: Icon(capFav ? Icons.bookmark : Icons.bookmark_border),
+              ),
+              IconButton(
+                tooltip: capLido ? 'Marcar como não lido' : 'Marcar como lido',
+                onPressed: () => _toggleCapituloLido(chaveCapitulo),
+                icon: Icon(
+                  capLido ? Icons.check_circle : Icons.check_circle_outline,
+                ),
               ),
               Builder(
                 builder: (ctx) => IconButton(
