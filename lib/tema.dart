@@ -179,13 +179,20 @@ const ColorScheme _esquemaSepia = ColorScheme(
 /// Monta o tema (claro ou escuro) com uma paleta coerente, pensada para boa
 /// legibilidade de pessoas idosas: contraste alto, destaques quentes, alvos de
 /// toque generosos e rótulos visíveis na navegação.
-ThemeData construirTema(Brightness brightness) =>
-    _montarTema(brightness == Brightness.light ? _esquemaClaro : _esquemaEscuro);
+ThemeData construirTema(
+  Brightness brightness, {
+  double alturaLinha = alturaLinhaPadrao,
+}) =>
+    _montarTema(
+      brightness == Brightness.light ? _esquemaClaro : _esquemaEscuro,
+      alturaLinha,
+    );
 
 /// Tema sépia (fundo de papiro e tinta marrom) para leitura noturna confortável.
-ThemeData construirTemaSepia() => _montarTema(_esquemaSepia);
+ThemeData construirTemaSepia({double alturaLinha = alturaLinhaPadrao}) =>
+    _montarTema(_esquemaSepia, alturaLinha);
 
-ThemeData _montarTema(ColorScheme esquema) {
+ThemeData _montarTema(ColorScheme esquema, double alturaLinha) {
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: esquema,
@@ -193,6 +200,9 @@ ThemeData _montarTema(ColorScheme esquema) {
   );
 
   return base.copyWith(
+    extensions: <ThemeExtension<dynamic>>[
+      TipografiaLeitura(alturaLinha: alturaLinha),
+    ],
     scaffoldBackgroundColor: esquema.surface,
     textTheme: base.textTheme.copyWith(
       headlineSmall: base.textTheme.headlineSmall?.copyWith(
@@ -280,15 +290,54 @@ ThemeData _montarTema(ColorScheme esquema) {
     ),
   );
 }
-/// Combina o ajuste do app (fonte grande) com a escala de acessibilidade do
+/// Limites e padrão da escala de leitura (tamanho do texto).
+///
+/// O padrão [escalaLeituraPadrao] (1.18) preserva o antigo comportamento
+/// "fonte maior" (recomendado para pessoas idosas). O usuário ajusta de 1.0
+/// (100%) até 1.6 (160%).
+const double escalaLeituraMinima = 1.0;
+const double escalaLeituraMaxima = 1.6;
+const double escalaLeituraPadrao = 1.18;
+
+/// Limites e padrão do espaçamento de linha da leitura.
+const double alturaLinhaMinima = 1.4;
+const double alturaLinhaMaxima = 1.8;
+const double alturaLinhaPadrao = 1.65;
+
+/// Tipografia da leitura (espaçamento de linha), exposta como extensão de tema
+/// para que qualquer widget leia via `TipografiaLeitura.de(context)`.
+@immutable
+class TipografiaLeitura extends ThemeExtension<TipografiaLeitura> {
+  final double alturaLinha;
+
+  const TipografiaLeitura({this.alturaLinha = alturaLinhaPadrao});
+
+  /// Lê a tipografia do tema; fallback para o padrão quando ausente.
+  static TipografiaLeitura de(BuildContext context) =>
+      Theme.of(context).extension<TipografiaLeitura>() ??
+      const TipografiaLeitura();
+
+  @override
+  TipografiaLeitura copyWith({double? alturaLinha}) =>
+      TipografiaLeitura(alturaLinha: alturaLinha ?? this.alturaLinha);
+
+  @override
+  TipografiaLeitura lerp(TipografiaLeitura? other, double t) {
+    if (other == null) return this;
+    return TipografiaLeitura(
+      alturaLinha: alturaLinha + (other.alturaLinha - alturaLinha) * t,
+    );
+  }
+}
+
+/// Combina a escala de leitura escolhida com a escala de acessibilidade do
 /// sistema, com teto de 2.0 para nunca estourar telas de 320 px (caso B12 da
-/// matriz de QA). O valor antigo de 1.18 vira o mínimo quando `fonteGrande`.
+/// matriz de QA).
 double escalaDeTexto({
-  required bool fonteGrande,
+  required double escalaLeitura,
   required double escalaSistema,
 }) {
-  final base = fonteGrande ? 1.18 : 1.0;
-  return (base * escalaSistema).clamp(1.0, 2.0);
+  return (escalaLeitura * escalaSistema).clamp(1.0, 2.0);
 }
 
 /// Razão de contraste entre duas cores (WCAG 2.x). Valor ≥ 4.5 é o alvo para

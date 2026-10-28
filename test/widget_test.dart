@@ -72,7 +72,9 @@ void main() {
     expect(find.text('Claro'), findsOneWidget);
     expect(find.text('Escuro'), findsOneWidget);
     expect(find.text('Sépia'), findsOneWidget);
-    expect(find.text('Fonte maior (recomendado)'), findsOneWidget);
+    expect(find.text('Tamanho do texto'), findsOneWidget);
+    expect(find.text('Espaçamento de linha'), findsOneWidget);
+    expect(find.byType(Slider), findsNWidgets(2));
 
     // T025/FR-011: persistência do modo de tema com reinício simulado.
     await tester.tap(find.text('Sépia'));

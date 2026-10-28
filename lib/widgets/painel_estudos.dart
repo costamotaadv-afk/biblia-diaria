@@ -114,7 +114,9 @@ class PainelEstudos extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 recurso.temCorpo ? recurso.corpo : 'Conteúdo não disponível.',
-                style: estiloCorpoEstudo,
+                style: estiloCorpoEstudo.copyWith(
+                  height: TipografiaLeitura.de(context).alturaLinha,
+                ),
               ),
               if (recurso.temFatos) _blocoFatos(context, recurso.fatos),
               if (credito.isNotEmpty) ...[
@@ -195,7 +197,9 @@ class PainelEstudos extends StatelessWidget {
                 Expanded(
                   child: Text(
                     fato,
-                    style: estiloCorpoEstudo,
+                    style: estiloCorpoEstudo.copyWith(
+                      height: TipografiaLeitura.de(context).alturaLinha,
+                    ),
                   ),
                 ),
               ],
