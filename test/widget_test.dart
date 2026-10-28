@@ -1,4 +1,5 @@
 import 'package:biblia_diaria/main.dart';
+import 'package:biblia_diaria/tema.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -68,11 +69,13 @@ void main() {
 
     await tester.tap(find.text('Ajustes').last);
     await tester.pump();
-    expect(find.text('Tema escuro'), findsOneWidget);
+    expect(find.text('Claro'), findsOneWidget);
+    expect(find.text('Escuro'), findsOneWidget);
+    expect(find.text('Sépia'), findsOneWidget);
     expect(find.text('Fonte maior (recomendado)'), findsOneWidget);
 
-    // T025/FR-011: persistência de tema_escuro com reinício simulado.
-    await tester.tap(find.byType(Switch).first); // alterna "Tema escuro"
+    // T025/FR-011: persistência do modo de tema com reinício simulado.
+    await tester.tap(find.text('Sépia'));
     await tester.pumpAndSettle();
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -82,11 +85,9 @@ void main() {
     await tester.pump();
     expect(
       tester
-          .widget<SwitchListTile>(
-            find.widgetWithText(SwitchListTile, 'Tema escuro'),
-          )
-          .value,
-      isTrue,
+          .widget<RadioGroup<ModoTema>>(find.byType(RadioGroup<ModoTema>))
+          .groupValue,
+      ModoTema.sepia,
     );
 
     // B10: aviso anti-fraude do Pix presente na aba Ajustes (regressão de texto)

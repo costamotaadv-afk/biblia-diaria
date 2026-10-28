@@ -51,6 +51,29 @@ const TextStyle estiloReferencia = TextStyle(
 /// sobre o fundo creme). O dourado claro fica reservado a preenchimentos.
 const Color douradoEscuro = Color(0xFF7A5A1E);
 
+/// Modos de aparência do leitor.
+///
+/// [nome] é o valor persistido em `SharedPreferences` (chave `modo_tema`),
+/// mantendo compatibilidade com o formato anterior (`tema_escuro`, booleano).
+enum ModoTema {
+  claro('claro'),
+  escuro('escuro'),
+  sepia('sepia');
+
+  const ModoTema(this.nome);
+
+  /// Valor persistido (string estável).
+  final String nome;
+
+  /// Converte o valor persistido em modo; nulo/desconhecido → [claro].
+  static ModoTema deNome(String? nome) {
+    return ModoTema.values.firstWhere(
+      (m) => m.nome == nome,
+      orElse: () => ModoTema.claro,
+    );
+  }
+}
+
 const ColorScheme _esquemaClaro = ColorScheme(
   brightness: Brightness.light,
   primary: Color(0xFF7A5A1E),
@@ -119,16 +142,54 @@ const ColorScheme _esquemaEscuro = ColorScheme(
   onInverseSurface: Color(0xFF2A2620),
   inversePrimary: Color(0xFF7A5A1E),
 );
+const ColorScheme _esquemaSepia = ColorScheme(
+  brightness: Brightness.light,
+  primary: Color(0xFF7A5A1E), // dourado escuro (mantém o acento do app)
+  onPrimary: Colors.white,
+  primaryContainer: Color(0xFFEAD9B4),
+  onPrimaryContainer: Color(0xFF2B1F06),
+  secondary: Color(0xFFA75A38), // terracota (favoritos, realces)
+  onSecondary: Colors.white,
+  secondaryContainer: Color(0xFFEED3C4),
+  onSecondaryContainer: Color(0xFF34180A),
+  tertiary: Color(0xFF2F4A6B), // azul-marinho (links, referências)
+  onTertiary: Colors.white,
+  tertiaryContainer: Color(0xFFD6E3F5),
+  onTertiaryContainer: Color(0xFF0B1D33),
+  error: Color(0xFFBA1A1A),
+  onError: Colors.white,
+  errorContainer: Color(0xFFFFDAD6),
+  onErrorContainer: Color(0xFF410002),
+  surface: Color(0xFFF4ECD8), // papiro sépia
+  onSurface: Color(0xFF4A3A28), // tinta marrom
+  surfaceContainerLowest: Color(0xFFFAF4E6),
+  surfaceContainerLow: Color(0xFFF2E8D0),
+  surfaceContainer: Color(0xFFECE0C4),
+  surfaceContainerHigh: Color(0xFFE6D8B8),
+  surfaceContainerHighest: Color(0xFFDFCFAC),
+  onSurfaceVariant: Color(0xFF5B4636),
+  outline: Color(0xFF8A7A5E),
+  outlineVariant: Color(0xFFD9C9A6),
+  shadow: Colors.black,
+  scrim: Colors.black,
+  inverseSurface: Color(0xFF3A2F1E),
+  onInverseSurface: Color(0xFFF5EFE4),
+  inversePrimary: Color(0xFFE3C27E),
+);
 /// Monta o tema (claro ou escuro) com uma paleta coerente, pensada para boa
 /// legibilidade de pessoas idosas: contraste alto, destaques quentes, alvos de
 /// toque generosos e rótulos visíveis na navegação.
-ThemeData construirTema(Brightness brightness) {
-  final esquema =
-      brightness == Brightness.light ? _esquemaClaro : _esquemaEscuro;
+ThemeData construirTema(Brightness brightness) =>
+    _montarTema(brightness == Brightness.light ? _esquemaClaro : _esquemaEscuro);
+
+/// Tema sépia (fundo de papiro e tinta marrom) para leitura noturna confortável.
+ThemeData construirTemaSepia() => _montarTema(_esquemaSepia);
+
+ThemeData _montarTema(ColorScheme esquema) {
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: esquema,
-    brightness: brightness,
+    brightness: esquema.brightness,
   );
 
   return base.copyWith(

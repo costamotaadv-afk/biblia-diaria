@@ -57,7 +57,7 @@ class BibliaApp extends StatefulWidget {
 }
 
 class _BibliaAppState extends State<BibliaApp> {
-  bool temaEscuro = false;
+  ModoTema modoTema = ModoTema.claro;
   bool fonteGrande = true;
 
   @override
@@ -70,15 +70,20 @@ class _BibliaAppState extends State<BibliaApp> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      temaEscuro = prefs.getBool('tema_escuro') ?? false;
+      final salvo = prefs.getString('modo_tema');
+      modoTema = salvo != null
+          ? ModoTema.deNome(salvo)
+          : (prefs.getBool('tema_escuro') ?? false)
+              ? ModoTema.escuro
+              : ModoTema.claro;
       fonteGrande = prefs.getBool('fonte_grande') ?? true;
     });
   }
 
-  Future<void> _atualizarTema(bool valor) async {
+  Future<void> _atualizarTema(ModoTema valor) async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() => temaEscuro = valor);
-    await prefs.setBool('tema_escuro', valor);
+    setState(() => modoTema = valor);
+    await prefs.setString('modo_tema', valor.nome);
   }
 
   Future<void> _atualizarFonteGrande(bool valor) async {
@@ -92,8 +97,11 @@ class _BibliaAppState extends State<BibliaApp> {
     return MaterialApp(
       title: 'Bíblia Diária',
       debugShowCheckedModeBanner: false,
-      themeMode: temaEscuro ? ThemeMode.dark : ThemeMode.light,
-      theme: construirTema(Brightness.light),
+      themeMode:
+          modoTema == ModoTema.escuro ? ThemeMode.dark : ThemeMode.light,
+      theme: modoTema == ModoTema.sepia
+          ? construirTemaSepia()
+          : construirTema(Brightness.light),
       darkTheme: construirTema(Brightness.dark),
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
@@ -108,8 +116,8 @@ class _BibliaAppState extends State<BibliaApp> {
       },
       home: TelaPrincipal(
         relogio: widget.relogio,
-        temaEscuro: temaEscuro,
-        onToggleTema: _atualizarTema,
+        modoTema: modoTema,
+        onAlterarTema: _atualizarTema,
         fonteGrande: fonteGrande,
         onToggleFonteGrande: _atualizarFonteGrande,
         linkCompartilhamento: widget.linkCompartilhamento,
@@ -122,8 +130,8 @@ class _BibliaAppState extends State<BibliaApp> {
 class TelaPrincipal extends StatefulWidget {
   /// Relógio injetável para testes de virada de dia (caso B4 de QA).
   final DateTime Function()? relogio;
-  final bool temaEscuro;
-  final ValueChanged<bool> onToggleTema;
+  final ModoTema modoTema;
+  final ValueChanged<ModoTema> onAlterarTema;
   final bool fonteGrande;
   final ValueChanged<bool> onToggleFonteGrande;
 
@@ -136,8 +144,8 @@ class TelaPrincipal extends StatefulWidget {
   const TelaPrincipal({
     super.key,
     this.relogio,
-    required this.temaEscuro,
-    required this.onToggleTema,
+    required this.modoTema,
+    required this.onAlterarTema,
     required this.fonteGrande,
     required this.onToggleFonteGrande,
     this.linkCompartilhamento = linkDownloadApp,
@@ -2177,11 +2185,31 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
       dragStartBehavior: DragStartBehavior.down,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
-        SwitchListTile(
-          title: const Text('Tema escuro'),
-          secondary: const Icon(Icons.dark_mode_outlined),
-          value: widget.temaEscuro,
-          onChanged: widget.onToggleTema,
+        RadioGroup<ModoTema>(
+          groupValue: widget.modoTema,
+          onChanged: (ModoTema? valor) {
+            if (valor != null) widget.onAlterarTema(valor);
+          },
+          child: const Column(
+            children: [
+              RadioListTile<ModoTema>(
+                title: Text('Claro'),
+                secondary: Icon(Icons.light_mode_outlined),
+                value: ModoTema.claro,
+              ),
+              RadioListTile<ModoTema>(
+                title: Text('Escuro'),
+                secondary: Icon(Icons.dark_mode_outlined),
+                value: ModoTema.escuro,
+              ),
+              RadioListTile<ModoTema>(
+                title: Text('Sépia'),
+                subtitle: Text('Fundo de papiro, mais confortável à noite.'),
+                secondary: Icon(Icons.auto_stories_outlined),
+                value: ModoTema.sepia,
+              ),
+            ],
+          ),
         ),
         SwitchListTile(
           title: const Text('Fonte maior (recomendado)'),
