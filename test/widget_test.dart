@@ -70,7 +70,8 @@ void main() {
     await tester.pump();
     expect(find.text('Tema escuro'), findsOneWidget);
     expect(find.text('Tamanho do texto'), findsOneWidget);
-    expect(find.byType(Slider), findsOneWidget);
+    expect(find.text('Espaçamento de linha'), findsOneWidget);
+    expect(find.byType(Slider), findsNWidgets(2));
 
     // T025/FR-011: persistência de tema_escuro com reinício simulado.
     await tester.tap(find.byType(Switch).first); // alterna "Tema escuro"

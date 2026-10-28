@@ -59,6 +59,7 @@ class BibliaApp extends StatefulWidget {
 class _BibliaAppState extends State<BibliaApp> {
   bool temaEscuro = false;
   double escalaLeitura = escalaLeituraPadrao;
+  double alturaLinha = alturaLinhaPadrao;
 
   @override
   void initState() {
@@ -77,6 +78,10 @@ class _BibliaAppState extends State<BibliaApp> {
           : ((prefs.getBool('fonte_grande') ?? true)
               ? escalaLeituraPadrao
               : 1.0);
+      final alturaSalva = prefs.getDouble('altura_linha_leitura');
+      alturaLinha = alturaSalva != null
+          ? alturaSalva.clamp(alturaLinhaMinima, alturaLinhaMaxima)
+          : alturaLinhaPadrao;
     });
   }
 
@@ -93,14 +98,21 @@ class _BibliaAppState extends State<BibliaApp> {
     await prefs.setDouble('escala_leitura', ajustado);
   }
 
+  Future<void> _atualizarAlturaLinha(double valor) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ajustado = valor.clamp(alturaLinhaMinima, alturaLinhaMaxima);
+    setState(() => alturaLinha = ajustado);
+    await prefs.setDouble('altura_linha_leitura', ajustado);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Bíblia Diária',
       debugShowCheckedModeBanner: false,
       themeMode: temaEscuro ? ThemeMode.dark : ThemeMode.light,
-      theme: construirTema(Brightness.light),
-      darkTheme: construirTema(Brightness.dark),
+      theme: construirTema(Brightness.light, alturaLinha: alturaLinha),
+      darkTheme: construirTema(Brightness.dark, alturaLinha: alturaLinha),
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         final escala = escalaDeTexto(
@@ -118,6 +130,8 @@ class _BibliaAppState extends State<BibliaApp> {
         onToggleTema: _atualizarTema,
         escalaLeitura: escalaLeitura,
         onAlterarEscalaLeitura: _atualizarEscalaLeitura,
+        alturaLinha: alturaLinha,
+        onAlterarAlturaLinha: _atualizarAlturaLinha,
         linkCompartilhamento: widget.linkCompartilhamento,
         compartilhar: widget.compartilhar,
       ),
@@ -132,6 +146,8 @@ class TelaPrincipal extends StatefulWidget {
   final ValueChanged<bool> onToggleTema;
   final double escalaLeitura;
   final ValueChanged<double> onAlterarEscalaLeitura;
+  final double alturaLinha;
+  final ValueChanged<double> onAlterarAlturaLinha;
 
   /// Link usado na mensagem de compartilhamento (vazio oculta o botão — SH1).
   final String linkCompartilhamento;
@@ -146,6 +162,8 @@ class TelaPrincipal extends StatefulWidget {
     required this.onToggleTema,
     required this.escalaLeitura,
     required this.onAlterarEscalaLeitura,
+    required this.alturaLinha,
+    required this.onAlterarAlturaLinha,
     this.linkCompartilhamento = linkDownloadApp,
     this.compartilhar,
   });
@@ -1559,7 +1577,10 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               TextSpan(text: texto),
             ],
           ),
-          style: estiloVersiculo.copyWith(color: esquema.onSurface),
+          style: estiloVersiculo.copyWith(
+            color: esquema.onSurface,
+            height: TipografiaLeitura.de(context).alturaLinha,
+          ),
         ),
         trailing: isFav
             ? Icon(Icons.bookmark, size: 20, color: esquema.secondary)
@@ -1608,6 +1629,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                       overflow: TextOverflow.ellipsis,
                       style: estiloVersiculo.copyWith(
                         color: esquema.onSurfaceVariant,
+                        height: TipografiaLeitura.de(context).alturaLinha,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -2211,6 +2233,32 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                 max: escalaLeituraMaxima,
                 label: '${(widget.escalaLeitura * 100).round()}%',
                 onChanged: widget.onAlterarEscalaLeitura,
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.format_line_spacing),
+                  const SizedBox(width: 16),
+                  const Expanded(child: Text('Espaçamento de linha')),
+                  Text(
+                    '${widget.alturaLinha.toStringAsFixed(2)}x',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              Slider(
+                value: widget.alturaLinha,
+                min: alturaLinhaMinima,
+                max: alturaLinhaMaxima,
+                label: '${widget.alturaLinha.toStringAsFixed(2)}x',
+                onChanged: widget.onAlterarAlturaLinha,
               ),
             ],
           ),

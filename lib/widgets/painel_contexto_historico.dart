@@ -78,14 +78,16 @@ class PainelContextoHistorico extends StatelessWidget {
             'Contexto político e social',
             Text(
               contexto.contextoPolitico,
-              style: estiloCorpoEstudo,
+              style: estiloCorpoEstudo.copyWith(
+                height: TipografiaLeitura.de(context).alturaLinha,
+              ),
             ),
           ),
         if (contexto.temEventos)
           _secao(
             context,
             'Acontecimentos históricos relacionados',
-            _blocoTopicos(contexto.eventos),
+            _blocoTopicos(context, contexto.eventos),
           ),
         if (contexto.temLocalizacao)
           _secao(
@@ -93,7 +95,9 @@ class PainelContextoHistorico extends StatelessWidget {
             'Localização geográfica',
             Text(
               contexto.localizacao,
-              style: estiloCorpoEstudo,
+              style: estiloCorpoEstudo.copyWith(
+                height: TipografiaLeitura.de(context).alturaLinha,
+              ),
             ),
           ),
         if (contexto.temReferencias)
@@ -108,7 +112,9 @@ class PainelContextoHistorico extends StatelessWidget {
             'Contextualização histórica',
             Text(
               contexto.explicacao,
-              style: estiloCorpoEstudo,
+              style: estiloCorpoEstudo.copyWith(
+                height: TipografiaLeitura.de(context).alturaLinha,
+              ),
             ),
           ),
         if (contexto.temFontes)
@@ -242,15 +248,15 @@ class PainelContextoHistorico extends StatelessWidget {
   Widget _blocoPeriodo(BuildContext context) {
     final linhas = <Widget>[];
     if (contexto.temPeriodo) {
-      linhas.add(_linhaPeriodo('Período associado', contexto.periodo));
+      linhas.add(_linhaPeriodo(context, 'Período associado', contexto.periodo));
     }
     if (contexto.temPeriodoRetratado) {
-      linhas.add(
-          _linhaPeriodo('Época retratada no texto', contexto.periodoRetratado));
+      linhas.add(_linhaPeriodo(
+          context, 'Época retratada no texto', contexto.periodoRetratado));
     }
     if (contexto.temPeriodoComposicao) {
       linhas.add(_linhaPeriodo(
-          'Provável época de composição', contexto.periodoComposicao));
+          context, 'Provável época de composição', contexto.periodoComposicao));
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,17 +264,19 @@ class PainelContextoHistorico extends StatelessWidget {
     );
   }
 
-  Widget _linhaPeriodo(String rotulo, String valor) {
+  Widget _linhaPeriodo(BuildContext context, String rotulo, String valor) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         '$rotulo: $valor',
-        style: estiloCorpoEstudo,
+        style: estiloCorpoEstudo.copyWith(
+          height: TipografiaLeitura.de(context).alturaLinha,
+        ),
       ),
     );
   }
 
-  Widget _blocoTopicos(List<String> topicos) {
+  Widget _blocoTopicos(BuildContext context, List<String> topicos) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -283,7 +291,9 @@ class PainelContextoHistorico extends StatelessWidget {
                 Expanded(
                   child: Text(
                     topico,
-                    style: estiloCorpoEstudo,
+                    style: estiloCorpoEstudo.copyWith(
+                      height: TipografiaLeitura.de(context).alturaLinha,
+                    ),
                   ),
                 ),
               ],

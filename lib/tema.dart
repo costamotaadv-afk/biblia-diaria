@@ -122,7 +122,10 @@ const ColorScheme _esquemaEscuro = ColorScheme(
 /// Monta o tema (claro ou escuro) com uma paleta coerente, pensada para boa
 /// legibilidade de pessoas idosas: contraste alto, destaques quentes, alvos de
 /// toque generosos e rótulos visíveis na navegação.
-ThemeData construirTema(Brightness brightness) {
+ThemeData construirTema(
+  Brightness brightness, {
+  double alturaLinha = alturaLinhaPadrao,
+}) {
   final esquema =
       brightness == Brightness.light ? _esquemaClaro : _esquemaEscuro;
   final base = ThemeData(
@@ -132,6 +135,9 @@ ThemeData construirTema(Brightness brightness) {
   );
 
   return base.copyWith(
+    extensions: <ThemeExtension<dynamic>>[
+      TipografiaLeitura(alturaLinha: alturaLinha),
+    ],
     scaffoldBackgroundColor: esquema.surface,
     textTheme: base.textTheme.copyWith(
       headlineSmall: base.textTheme.headlineSmall?.copyWith(
@@ -227,6 +233,37 @@ ThemeData construirTema(Brightness brightness) {
 const double escalaLeituraMinima = 1.0;
 const double escalaLeituraMaxima = 1.6;
 const double escalaLeituraPadrao = 1.18;
+
+/// Limites e padrão do espaçamento de linha da leitura.
+const double alturaLinhaMinima = 1.4;
+const double alturaLinhaMaxima = 1.8;
+const double alturaLinhaPadrao = 1.65;
+
+/// Tipografia da leitura (espaçamento de linha), exposta como extensão de tema
+/// para que qualquer widget leia via `TipografiaLeitura.de(context)`.
+@immutable
+class TipografiaLeitura extends ThemeExtension<TipografiaLeitura> {
+  final double alturaLinha;
+
+  const TipografiaLeitura({this.alturaLinha = alturaLinhaPadrao});
+
+  /// Lê a tipografia do tema; fallback para o padrão quando ausente.
+  static TipografiaLeitura de(BuildContext context) =>
+      Theme.of(context).extension<TipografiaLeitura>() ??
+      const TipografiaLeitura();
+
+  @override
+  TipografiaLeitura copyWith({double? alturaLinha}) =>
+      TipografiaLeitura(alturaLinha: alturaLinha ?? this.alturaLinha);
+
+  @override
+  TipografiaLeitura lerp(TipografiaLeitura? other, double t) {
+    if (other == null) return this;
+    return TipografiaLeitura(
+      alturaLinha: alturaLinha + (other.alturaLinha - alturaLinha) * t,
+    );
+  }
+}
 
 /// Combina a escala de leitura escolhida com a escala de acessibilidade do
 /// sistema, com teto de 2.0 para nunca estourar telas de 320 px (caso B12 da
