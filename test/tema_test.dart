@@ -8,20 +8,20 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('escalaDeTexto', () {
-    test('fonte grande + sistema 1.0 → 1.18 (comportamento preservado)', () {
-      expect(escalaDeTexto(fonteGrande: true, escalaSistema: 1.0), 1.18);
+    test('escala padrão 1.18 + sistema 1.0 → 1.18 (comportamento preservado)', () {
+      expect(escalaDeTexto(escalaLeitura: 1.18, escalaSistema: 1.0), 1.18);
     });
 
-    test('fonte normal + sistema 1.0 → 1.0', () {
-      expect(escalaDeTexto(fonteGrande: false, escalaSistema: 1.0), 1.0);
+    test('escala mínima 1.0 + sistema 1.0 → 1.0', () {
+      expect(escalaDeTexto(escalaLeitura: 1.0, escalaSistema: 1.0), 1.0);
     });
 
     test('compõe com a escala do sistema até o teto de 2.0', () {
       expect(
-        escalaDeTexto(fonteGrande: true, escalaSistema: 1.3),
+        escalaDeTexto(escalaLeitura: 1.18, escalaSistema: 1.3),
         closeTo(1.534, 0.001),
       );
-      expect(escalaDeTexto(fonteGrande: false, escalaSistema: 2.5), 2.0);
+      expect(escalaDeTexto(escalaLeitura: 1.0, escalaSistema: 2.5), 2.0);
     });
   });
 

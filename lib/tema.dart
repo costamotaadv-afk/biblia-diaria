@@ -219,15 +219,23 @@ ThemeData construirTema(Brightness brightness) {
     ),
   );
 }
-/// Combina o ajuste do app (fonte grande) com a escala de acessibilidade do
+/// Limites e padrão da escala de leitura (tamanho do texto).
+///
+/// O padrão [escalaLeituraPadrao] (1.18) preserva o antigo comportamento
+/// "fonte maior" (recomendado para pessoas idosas). O usuário ajusta de 1.0
+/// (100%) até 1.6 (160%).
+const double escalaLeituraMinima = 1.0;
+const double escalaLeituraMaxima = 1.6;
+const double escalaLeituraPadrao = 1.18;
+
+/// Combina a escala de leitura escolhida com a escala de acessibilidade do
 /// sistema, com teto de 2.0 para nunca estourar telas de 320 px (caso B12 da
-/// matriz de QA). O valor antigo de 1.18 vira o mínimo quando `fonteGrande`.
+/// matriz de QA).
 double escalaDeTexto({
-  required bool fonteGrande,
+  required double escalaLeitura,
   required double escalaSistema,
 }) {
-  final base = fonteGrande ? 1.18 : 1.0;
-  return (base * escalaSistema).clamp(1.0, 2.0);
+  return (escalaLeitura * escalaSistema).clamp(1.0, 2.0);
 }
 
 /// Razão de contraste entre duas cores (WCAG 2.x). Valor ≥ 4.5 é o alvo para

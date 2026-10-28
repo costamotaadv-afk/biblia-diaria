@@ -58,7 +58,7 @@ class BibliaApp extends StatefulWidget {
 
 class _BibliaAppState extends State<BibliaApp> {
   bool temaEscuro = false;
-  bool fonteGrande = true;
+  double escalaLeitura = escalaLeituraPadrao;
 
   @override
   void initState() {
@@ -71,7 +71,12 @@ class _BibliaAppState extends State<BibliaApp> {
     if (!mounted) return;
     setState(() {
       temaEscuro = prefs.getBool('tema_escuro') ?? false;
-      fonteGrande = prefs.getBool('fonte_grande') ?? true;
+      final escalaSalva = prefs.getDouble('escala_leitura');
+      escalaLeitura = escalaSalva != null
+          ? escalaSalva.clamp(escalaLeituraMinima, escalaLeituraMaxima)
+          : ((prefs.getBool('fonte_grande') ?? true)
+              ? escalaLeituraPadrao
+              : 1.0);
     });
   }
 
@@ -81,10 +86,11 @@ class _BibliaAppState extends State<BibliaApp> {
     await prefs.setBool('tema_escuro', valor);
   }
 
-  Future<void> _atualizarFonteGrande(bool valor) async {
+  Future<void> _atualizarEscalaLeitura(double valor) async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() => fonteGrande = valor);
-    await prefs.setBool('fonte_grande', valor);
+    final ajustado = valor.clamp(escalaLeituraMinima, escalaLeituraMaxima);
+    setState(() => escalaLeitura = ajustado);
+    await prefs.setDouble('escala_leitura', ajustado);
   }
 
   @override
@@ -98,7 +104,7 @@ class _BibliaAppState extends State<BibliaApp> {
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         final escala = escalaDeTexto(
-          fonteGrande: fonteGrande,
+          escalaLeitura: escalaLeitura,
           escalaSistema: mediaQuery.textScaler.scale(1.0),
         );
         return MediaQuery(
@@ -110,8 +116,8 @@ class _BibliaAppState extends State<BibliaApp> {
         relogio: widget.relogio,
         temaEscuro: temaEscuro,
         onToggleTema: _atualizarTema,
-        fonteGrande: fonteGrande,
-        onToggleFonteGrande: _atualizarFonteGrande,
+        escalaLeitura: escalaLeitura,
+        onAlterarEscalaLeitura: _atualizarEscalaLeitura,
         linkCompartilhamento: widget.linkCompartilhamento,
         compartilhar: widget.compartilhar,
       ),
@@ -124,8 +130,8 @@ class TelaPrincipal extends StatefulWidget {
   final DateTime Function()? relogio;
   final bool temaEscuro;
   final ValueChanged<bool> onToggleTema;
-  final bool fonteGrande;
-  final ValueChanged<bool> onToggleFonteGrande;
+  final double escalaLeitura;
+  final ValueChanged<double> onAlterarEscalaLeitura;
 
   /// Link usado na mensagem de compartilhamento (vazio oculta o botão — SH1).
   final String linkCompartilhamento;
@@ -138,8 +144,8 @@ class TelaPrincipal extends StatefulWidget {
     this.relogio,
     required this.temaEscuro,
     required this.onToggleTema,
-    required this.fonteGrande,
-    required this.onToggleFonteGrande,
+    required this.escalaLeitura,
+    required this.onAlterarEscalaLeitura,
     this.linkCompartilhamento = linkDownloadApp,
     this.compartilhar,
   });
@@ -2183,12 +2189,31 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           value: widget.temaEscuro,
           onChanged: widget.onToggleTema,
         ),
-        SwitchListTile(
-          title: const Text('Fonte maior (recomendado)'),
-          subtitle: const Text('Melhora leitura para pessoas idosas.'),
-          secondary: const Icon(Icons.text_fields),
-          value: widget.fonteGrande,
-          onChanged: widget.onToggleFonteGrande,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.text_fields),
+                  const SizedBox(width: 16),
+                  const Expanded(child: Text('Tamanho do texto')),
+                  Text(
+                    '${(widget.escalaLeitura * 100).round()}%',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              Slider(
+                value: widget.escalaLeitura,
+                min: escalaLeituraMinima,
+                max: escalaLeituraMaxima,
+                label: '${(widget.escalaLeitura * 100).round()}%',
+                onChanged: widget.onAlterarEscalaLeitura,
+              ),
+            ],
+          ),
         ),
         ListTile(
           leading: Icon(
