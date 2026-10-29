@@ -18,6 +18,7 @@ import 'compartilhamento.dart';
 import 'contexto_historico.dart';
 import 'config.dart';
 import 'dados_seguros.dart';
+import 'destaques.dart';
 import 'leitura_natural.dart';
 import 'platform_support.dart';
 import 'progresso_leitura.dart';
@@ -198,6 +199,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   Set<String> favoritosVersiculos = {};
   Set<String> favoritosCapitulos = {};
   Set<String> capitulosLidos = {};
+  Map<String, String> destaquesVersiculos = {};
   final TextEditingController _buscaController = TextEditingController();
   String _termoBusca = '';
   List<ResultadoBusca> _resultadosBusca = [];
@@ -245,6 +247,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   Future<void> _escritaFavCapitulos = Future<void>.value();
   Future<void> _escritaFavEstudos = Future<void>.value();
   Future<void> _escritaCapLidos = Future<void>.value();
+  Future<void> _escritaDestaques = Future<void>.value();
 
   @override
   void initState() {
@@ -326,6 +329,22 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           (prefs.getStringList('favoritos_capitulos') ?? []).toSet();
       capitulosLidos =
           (prefs.getStringList('capitulos_lidos') ?? []).toSet();
+      final destaquesRaw = prefs.getString('destaques_versiculos');
+      destaquesVersiculos = <String, String>{};
+      if (destaquesRaw != null) {
+        try {
+          final decodificado = jsonDecode(destaquesRaw);
+          if (decodificado is Map) {
+            decodificado.forEach((k, v) {
+              if (k is String && v is String) {
+                destaquesVersiculos[k] = v;
+              }
+            });
+          }
+        } catch (_) {
+          destaquesVersiculos = <String, String>{};
+        }
+      }
       favoritosEstudos =
           (prefs.getStringList('favoritos_estudos') ?? []).toSet();
       _indiceEstudos = indiceEstudos;
@@ -1103,6 +1122,27 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     return _escritaCapLidos;
   }
 
+  Future<void> _alternarDestaque(String chave, String cor) async {
+    if (!mounted) return;
+    setState(() {
+      if (destaquesVersiculos[chave] == cor) {
+        destaquesVersiculos.remove(chave);
+      } else {
+        destaquesVersiculos[chave] = cor;
+      }
+    });
+    await _persistirDestaques();
+  }
+
+  Future<void> _persistirDestaques() {
+    final snapshot = jsonEncode(destaquesVersiculos);
+    _escritaDestaques = _escritaDestaques.then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('destaques_versiculos', snapshot);
+    });
+    return _escritaDestaques;
+  }
+
   String _chaveCapitulo(String livroNome, dynamic numeroCapitulo) {
     return '$livroNome $numeroCapitulo';
   }
@@ -1778,11 +1818,15 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   ) {
     final isFav = favoritosVersiculos.contains(chaveVersiculo);
     final esquema = Theme.of(context).colorScheme;
+    final nomeDestaque = destaquesVersiculos[chaveVersiculo];
+    final hexDestaque =
+        nomeDestaque == null ? null : paletaDestaques[nomeDestaque];
     return Semantics(
       button: true,
       label: 'Versículo $numeroVersiculo. Toque para ouvir, copiar, '
           'compartilhar ou favoritar.',
       child: ListTile(
+        tileColor: hexDestaque == null ? null : _corDeHex(hexDestaque),
         onTap: () => _abrirAcoesVersiculo(nomeLivro, chaveVersiculo, texto),
         minVerticalPadding: 12,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -1854,6 +1898,23 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                         color: esquema.onSurfaceVariant,
                         height: TipografiaLeitura.de(context).alturaLinha,
                       ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (final entry in paletaDestaques.entries)
+                          _CirculoDestaque(
+                            hex: entry.value,
+                            selecionado:
+                                destaquesVersiculos[chaveVersiculo] ==
+                                    entry.key,
+                            onTap: () {
+                              _alternarDestaque(chaveVersiculo, entry.key);
+                              setSheetState(() {});
+                            },
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     if (_temEstudos(chaveVersiculo, nomeLivro))
@@ -2821,6 +2882,56 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
 }
 
 /// Ação da folha de ações do versículo: alvo largo com ícone + rótulo.
+/// Converte "#RRGGBB" em [Color] (alpha opaco).
+Color _corDeHex(String hex) {
+  final limpo = hex.replaceFirst('#', '');
+  return Color(0xFF000000 | int.parse(limpo, radix: 16));
+}
+
+/// Círculo de cor para destacar um versículo (com estado selecionado).
+class _CirculoDestaque extends StatelessWidget {
+  final String hex;
+  final bool selecionado;
+  final VoidCallback onTap;
+
+  const _CirculoDestaque({
+    required this.hex,
+    required this.selecionado,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final esquema = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Semantics(
+        button: true,
+        label: 'Destaque',
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: _corDeHex(hex),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: selecionado ? esquema.primary : esquema.outline,
+                width: selecionado ? 2.5 : 1,
+              ),
+            ),
+            child: selecionado
+                ? Icon(Icons.check, size: 18, color: esquema.onSurface)
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AcaoFolha extends StatelessWidget {
   final IconData icon;
   final String label;
