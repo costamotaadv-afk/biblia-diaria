@@ -200,6 +200,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   Set<String> favoritosCapitulos = {};
   Set<String> capitulosLidos = {};
   Map<String, String> destaquesVersiculos = {};
+  Map<String, String> notasVersiculos = {};
   final TextEditingController _buscaController = TextEditingController();
   String _termoBusca = '';
   List<ResultadoBusca> _resultadosBusca = [];
@@ -248,6 +249,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   Future<void> _escritaFavEstudos = Future<void>.value();
   Future<void> _escritaCapLidos = Future<void>.value();
   Future<void> _escritaDestaques = Future<void>.value();
+  Future<void> _escritaNotas = Future<void>.value();
 
   @override
   void initState() {
@@ -343,6 +345,22 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           }
         } catch (_) {
           destaquesVersiculos = <String, String>{};
+        }
+      }
+      final notasRaw = prefs.getString('notas_versiculos');
+      notasVersiculos = <String, String>{};
+      if (notasRaw != null) {
+        try {
+          final decodificado = jsonDecode(notasRaw);
+          if (decodificado is Map) {
+            decodificado.forEach((k, v) {
+              if (k is String && v is String) {
+                notasVersiculos[k] = v;
+              }
+            });
+          }
+        } catch (_) {
+          notasVersiculos = <String, String>{};
         }
       }
       favoritosEstudos =
@@ -1143,6 +1161,80 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     return _escritaDestaques;
   }
 
+  Future<void> _salvarNota(String chave, String texto) async {
+    if (!mounted) return;
+    final nota = texto.trim();
+    setState(() {
+      if (nota.isEmpty) {
+        notasVersiculos.remove(chave);
+      } else {
+        notasVersiculos[chave] = nota;
+      }
+    });
+    await _persistirNotas();
+  }
+
+  Future<void> _removerNota(String chave) async {
+    if (!mounted) return;
+    setState(() => notasVersiculos.remove(chave));
+    await _persistirNotas();
+  }
+
+  Future<void> _persistirNotas() {
+    final snapshot = jsonEncode(notasVersiculos);
+    _escritaNotas = _escritaNotas.then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('notas_versiculos', snapshot);
+    });
+    return _escritaNotas;
+  }
+
+  Future<void> _abrirEditorNota(String chaveVersiculo) async {
+    final controller =
+        TextEditingController(text: notasVersiculos[chaveVersiculo] ?? '');
+    final existente = (notasVersiculos[chaveVersiculo] ?? '').trim();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(existente.isEmpty ? 'Nova anotação' : 'Editar anotação'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            minLines: 3,
+            maxLines: 6,
+            decoration: const InputDecoration(
+              hintText: 'Escreva sua anotação…',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            if (existente.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  _removerNota(chaveVersiculo);
+                  Navigator.of(dialogContext).pop();
+                },
+                child: const Text('Excluir'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                _salvarNota(chaveVersiculo, controller.text);
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+  }
+
   String _chaveCapitulo(String livroNome, dynamic numeroCapitulo) {
     return '$livroNome $numeroCapitulo';
   }
@@ -1821,6 +1913,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     final nomeDestaque = destaquesVersiculos[chaveVersiculo];
     final hexDestaque =
         nomeDestaque == null ? null : paletaDestaques[nomeDestaque];
+    final temNota = notasVersiculos.containsKey(chaveVersiculo);
     return Semantics(
       button: true,
       label: 'Versículo $numeroVersiculo. Toque para ouvir, copiar, '
@@ -1849,8 +1942,17 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
             height: TipografiaLeitura.de(context).alturaLinha,
           ),
         ),
-        trailing: isFav
-            ? Icon(Icons.bookmark, size: 20, color: esquema.secondary)
+        trailing: (isFav || temNota)
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (temNota)
+                    Icon(Icons.sticky_note_2_outlined,
+                        size: 20, color: esquema.primary),
+                  if (isFav)
+                    Icon(Icons.bookmark, size: 20, color: esquema.secondary),
+                ],
+              )
             : null,
       ),
     );
@@ -1874,6 +1976,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             final salvo = favoritosVersiculos.contains(chaveVersiculo);
+            final temNota = notasVersiculos.containsKey(chaveVersiculo);
             final esquema = Theme.of(context).colorScheme;
             return SafeArea(
               child: Padding(
@@ -1966,6 +2069,14 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                       onTap: () {
                         _toggleFavoritoVersiculo(chaveVersiculo);
                         setSheetState(() {});
+                      },
+                    ),
+                    _AcaoFolha(
+                      icon: Icons.sticky_note_2_outlined,
+                      label: temNota ? 'Editar anotação' : 'Anotar',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _abrirEditorNota(chaveVersiculo);
                       },
                     ),
                   ],
