@@ -9,6 +9,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'busca_biblia.dart';
 import 'cache_contexto.dart';
 import 'cache_estudos.dart';
 import 'cache_livros.dart';
@@ -197,6 +198,10 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   Set<String> favoritosVersiculos = {};
   Set<String> favoritosCapitulos = {};
   Set<String> capitulosLidos = {};
+  final TextEditingController _buscaController = TextEditingController();
+  String _termoBusca = '';
+  List<ResultadoBusca> _resultadosBusca = [];
+  bool _buscando = false;
   Set<String> favoritosEstudos = {};
   List<RecursoEstudo> _indiceEstudos = [];
   // Estado de expansão da aba Bíblia. Um livro expandido vira linhas planas e
@@ -257,6 +262,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     // o catchError evita erro não tratado (caso C11 da matriz de QA).
     _tts.stop().catchError((Object _) {});
     _controleLeitura.dispose();
+    _buscaController.dispose();
     super.dispose();
   }
 
@@ -1403,7 +1409,135 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     return _compartilharConteudo(contextoDoBotao, mensagem);
   }
 
+  /// Campo de busca textual (aplica-se à aba Bíblia).
+  Widget _campoBusca() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      child: TextField(
+        controller: _buscaController,
+        onChanged: _executarBusca,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Buscar na Bíblia…',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _termoBusca.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Limpar busca',
+                  icon: const Icon(Icons.clear),
+                  onPressed: _limparBusca,
+                ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Executa a busca, carregando os livros sob demanda (cache reutilizado).
+  Future<void> _executarBusca(String termo) async {
+    setState(() => _termoBusca = termo);
+    final alvo = termo.trim();
+    if (alvo.isEmpty) {
+      setState(() {
+        _resultadosBusca = [];
+        _buscando = false;
+      });
+      return;
+    }
+    setState(() => _buscando = true);
+    final nomes = _indice.map((i) => '${i['nome']}').toList();
+    await Future.wait(nomes.map(_cacheLivros.assegurar));
+    if (!mounted) return;
+    final resultados = buscarNaBiblia(_cacheLivros.cache.values, alvo);
+    setState(() {
+      _resultadosBusca = resultados;
+      _buscando = false;
+    });
+  }
+
+  void _limparBusca() {
+    _buscaController.clear();
+    setState(() {
+      _termoBusca = '';
+      _resultadosBusca = [];
+      _buscando = false;
+    });
+  }
+
+  Future<void> _abrirResultadoBusca(ResultadoBusca resultado) async {
+    _limparBusca();
+    await _irParaReferencia(resultado.referencia);
+  }
+
+  Widget _linhaResultadoBusca(ResultadoBusca resultado) {
+    final esquema = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: Icon(Icons.menu_book_outlined, color: esquema.primary),
+      title: Text(
+        resultado.referencia,
+        style: TextStyle(fontWeight: FontWeight.w700, color: esquema.primary),
+      ),
+      subtitle: Text(
+        resultado.texto,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onTap: () => _abrirResultadoBusca(resultado),
+    );
+  }
+
+  /// Visão de resultados (substitui a lista de livros enquanto há termo).
+  Widget _montarResultadosBusca() {
+    final linhas = <Widget Function()>[];
+    for (final r in _resultadosBusca) {
+      linhas.add(() => _linhaResultadoBusca(r));
+    }
+    if (_buscando) {
+      linhas.add(() => const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          ));
+    } else if (_resultadosBusca.isEmpty) {
+      linhas.add(() => const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Nenhum resultado encontrado.',
+              textAlign: TextAlign.center,
+            ),
+          ));
+    }
+    return CustomScrollView(
+      controller: _controleLeitura,
+      physics: const ClampingScrollPhysics(),
+      dragStartBehavior: DragStartBehavior.down,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      slivers: [
+        const SliverAppBar(
+          floating: true,
+          snap: true,
+          pinned: false,
+          title: Text('Bíblia Diária'),
+          centerTitle: true,
+        ),
+        SliverToBoxAdapter(child: _campoBusca()),
+        SliverPadding(
+          padding: const EdgeInsets.all(12),
+          sliver: SliverList.builder(
+            itemCount: linhas.length,
+            itemBuilder: (context, i) => linhas[i](),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _montarTelaLeitura() {
+    if (_termoBusca.trim().isNotEmpty) {
+      return _montarResultadosBusca();
+    }
+
     // Linhas planas (descrições leves) para o ListView.builder LAZY: um livro
     // expandido vira as linhas de capítulo/versículo, mas cada widget só é
     // construído quando entra na viewport. Antes, um único livro grande
@@ -1479,6 +1613,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
           title: Text('Bíblia Diária'),
           centerTitle: true,
         ),
+        SliverToBoxAdapter(child: _campoBusca()),
         SliverPadding(
           padding: const EdgeInsets.all(12),
           sliver: SliverList.builder(
