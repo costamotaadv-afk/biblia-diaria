@@ -323,6 +323,10 @@ const List<String> marcadoresMotorRobotico = <String>[
   'festival', // Festival Speech (legado)
   'flite', // Flite (legado)
   'dectalk', // DECtalk (legado)
+  'eloquence', // Eloquence (vozes clássicas robóticas, iOS/macOS/Windows)
+  'vocalizer', // Nuance Vocalizer (motor antigo)
+  'infovox', // Acapela Infovox (legado)
+  'sapi', // SAPI legado do Windows (som metálico)
   'compact', // iOS compact (qualidade reduzida)
 ];
 
@@ -332,10 +336,27 @@ class VozDeLeitura {
   final String locale;
   final String gender;
 
+  /// Qualidade informada pelo motor: Android `Voice.QUALITY_*` (100–500) ou
+  /// iOS `AVSpeechSynthesisVoiceQuality` (1=default, 2=enhanced, 3=premium).
+  final int? quality;
+
+  /// Android: `true` quando a voz exige rede (em geral soa mais natural).
+  final bool? networkRequired;
+
+  /// Android: capacidades da voz (ex.: `notInstalled`, `networkTimeoutMs`).
+  final Set<String> features;
+
+  /// iOS/macOS/Windows: identificador estável da voz (ex.: `com.apple...`).
+  final String? identifier;
+
   const VozDeLeitura({
     required this.name,
     required this.locale,
     required this.gender,
+    this.quality,
+    this.networkRequired,
+    this.features = const <String>{},
+    this.identifier,
   });
 
   /// Identificador persistível (`voz_tts_id`), no formato `nome|locale`.
@@ -351,24 +372,41 @@ class VozDeLeitura {
     return '$name ($locale, $generoLegivel)';
   }
 
-  /// `true` quando o nome aponta para um motor TTS legado/robotizado.
+  /// `true` quando o nome ou o identificador apontam para um motor TTS
+  /// legado/robotizado.
   bool get ehRobotica {
     final nome = name.toLowerCase();
-    return marcadoresMotorRobotico.any((marcador) => nome.contains(marcador));
+    final ident = (identifier ?? '').toLowerCase();
+    return marcadoresMotorRobotico.any(
+      (marcador) => nome.contains(marcador) || ident.contains(marcador),
+    );
   }
+
+  /// Pontuação desta voz para a leitura (ver [pontuarVozParaLeitura]).
+  int get pontuacao => pontuarVozParaLeitura(
+        name: name,
+        locale: locale,
+        gender: gender,
+        quality: quality,
+        networkRequired: networkRequired,
+        features: features,
+      );
 }
 
 /// Pontua uma voz para a leitura bíblica — quanto maior, mais adequada.
 ///
-/// Prioriza pt-BR (depois pt-PT), marcadores de voz neural/natural
-/// (`neural`, `wavenet`, `enhanced`, `premium`, `studio`) e, por fim, a voz
-/// feminina (mais suave para meditação). Vozes sem marcador e sem gênero
-/// ficam no final, mas não são descartadas aqui — esse papel é de
-/// [filtrarVozesParaLeitura].
+/// Combina a qualidade estruturada informada pelo motor ([quality],
+/// [networkRequired], [features]) com a heurística de nome (`neural`,
+/// `wavenet`, `enhanced`, `premium`, `studio`) e a preferência por voz
+/// feminina (mais suave para meditação). Vozes sem marcador ficam no final,
+/// mas não são descartadas aqui — esse papel é de [filtrarVozesParaLeitura].
 int pontuarVozParaLeitura({
   required String name,
   required String locale,
   required String gender,
+  int? quality,
+  bool? networkRequired,
+  Set<String>? features,
 }) {
   final nome = name.toLowerCase();
   final loc = locale.toLowerCase();
@@ -376,11 +414,22 @@ int pontuarVozParaLeitura({
 
   if (loc.contains('pt-br')) {
     pts += 100;
-  } else if (loc.contains('pt-pt')) {
-    pts += 60;
   }
 
-  // Marcadores de alta qualidade (som humano), do mais forte ao mais fraco.
+  pts += _pontosPorQualidade(quality);
+
+  // Voz que exige rede (ex.: Google TTS "-network") tende a soar bem mais
+  // natural que a versão local; preferimos quando disponível.
+  if (networkRequired == true) pts += 60;
+
+  // Voz ainda não instalada no aparelho exige download e pode falhar offline;
+  // penaliza para só escolhê-la se for a única opção.
+  if (features != null &&
+      features.any((e) => e.toLowerCase() == 'notinstalled')) {
+    pts -= 200;
+  }
+
+  // Heurística de nome como fallback para plataformas sem `quality`.
   if (nome.contains('neural') || nome.contains('wavenet')) {
     pts += 120;
   } else if (nome.contains('enhanced') ||
@@ -398,24 +447,85 @@ int pontuarVozParaLeitura({
   return pts;
 }
 
-/// Converte a lista bruta de `getVoices` em vozes `pt` adequadas à leitura,
+/// Converte a `quality` do motor em pontos de naturalidade.
+///
+/// Android usa `Voice.QUALITY_*` (100–500); iOS usa
+/// `AVSpeechSynthesisVoiceQuality` (1=default, 2=enhanced, 3=premium).
+/// A distinção é por faixa: valores ≤ 3 são iOS; ≥ 100 são Android.
+int _pontosPorQualidade(int? quality) {
+  if (quality == null) return 0;
+  // iOS: 1=default, 2=enhanced, 3=premium.
+  if (quality <= 3) {
+    switch (quality) {
+      case 3:
+        return 120; // premium
+      case 2:
+        return 90; // enhanced
+      default:
+        return 0; // default/compact
+    }
+  }
+  // Android: QUALITY_VERY_HIGH=500 … QUALITY_VERY_LOW=100.
+  if (quality >= 500) return 120; // very high
+  if (quality >= 400) return 90; // high
+  if (quality >= 300) return 40; // normal
+  if (quality >= 200) return 10; // low
+  return 0; // very low
+}
+
+/// Lê um campo numérico do `getVoices` sem quebrar se vier como `int`,
+/// `double` ou `String`.
+int? _paraInt(dynamic valor) {
+  if (valor is num) return valor.toInt();
+  if (valor is String) return int.tryParse(valor);
+  return null;
+}
+
+/// Lê um booleano do `getVoices` (o plugin pode devolver `bool`, `int` 0/1 ou
+/// `String` "true"/"false").
+bool? _paraBool(dynamic valor) {
+  if (valor is bool) return valor;
+  if (valor is num) return valor != 0;
+  if (valor is String) {
+    final v = valor.toLowerCase();
+    if (v == 'true' || v == '1') return true;
+    if (v == 'false' || v == '0') return false;
+  }
+  return null;
+}
+
+/// Normaliza o conjunto de capacidades (`features`) para minúsculas.
+Set<String> _paraConjunto(dynamic valor) {
+  if (valor is Iterable) {
+    return valor.map((e) => '$e'.toLowerCase()).toSet();
+  }
+  return const <String>{};
+}
+
+/// Converte a lista bruta de `getVoices` em vozes pt-BR adequadas à leitura,
 /// já ordenadas da melhor para a pior.
 ///
 /// Descarta motores legados/robotizados ([VozDeLeitura.ehRobotica]) sempre que
 /// existir ao menos uma alternativa não legada; se o aparelho só oferecer
 /// motores antigos, mantém todos para não deixar o usuário sem voz
-/// (degradação graciosa). Vozes de outros idiomas são ignoradas.
+/// (degradação graciosa). Vozes de outros idiomas (incluindo pt-PT) são
+/// ignoradas — o app roda somente em pt-BR.
 List<VozDeLeitura> filtrarVozesParaLeitura(List<dynamic> vozesBrutas) {
   VozDeLeitura? parse(dynamic bruto) {
     if (bruto is! Map) return null;
     final locale = '${bruto['locale'] ?? ''}'.trim();
-    if (!locale.toLowerCase().startsWith('pt')) return null;
+    if (!locale.toLowerCase().contains('pt-br')) return null;
     final name = '${bruto['name'] ?? ''}'.trim();
     if (name.isEmpty) return null;
+    final identifier = '${bruto['identifier'] ?? ''}'.trim();
     return VozDeLeitura(
       name: name,
       locale: locale,
       gender: '${bruto['gender'] ?? ''}'.toLowerCase(),
+      quality: _paraInt(bruto['quality']),
+      networkRequired: _paraBool(bruto['network_required']),
+      features: _paraConjunto(bruto['features']),
+      identifier: identifier.isEmpty ? null : identifier,
     );
   }
 
@@ -429,15 +539,7 @@ List<VozDeLeitura> filtrarVozesParaLeitura(List<dynamic> vozesBrutas) {
   if (selecionadas.isEmpty) selecionadas = todas;
 
   selecionadas.sort((a, b) {
-    final cmp = pontuarVozParaLeitura(
-      name: b.name,
-      locale: b.locale,
-      gender: b.gender,
-    ).compareTo(pontuarVozParaLeitura(
-      name: a.name,
-      locale: a.locale,
-      gender: a.gender,
-    ));
+    final cmp = b.pontuacao.compareTo(a.pontuacao);
     if (cmp != 0) return cmp;
     return a.label.compareTo(b.label);
   });

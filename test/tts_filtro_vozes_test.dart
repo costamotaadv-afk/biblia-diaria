@@ -33,6 +33,18 @@ void main() {
       );
     });
 
+    test('detecta eloquence pelo identificador', () {
+      expect(
+        const VozDeLeitura(
+          name: 'Fiona',
+          locale: 'pt-BR',
+          gender: 'female',
+          identifier: 'com.apple.eloquence.pt-BR.Fiona',
+        ).ehRobotica,
+        isTrue,
+      );
+    });
+
     test('não marca vozes neurais/standard como robóticas', () {
       expect(
         const VozDeLeitura(
@@ -68,7 +80,7 @@ void main() {
       expect(neural, greaterThan(standard));
     });
 
-    test('pt-BR feminina supera pt-PT masculina', () {
+    test('pt-PT não pontua — o app roda somente em pt-BR', () {
       final brFem = pontuarVozParaLeitura(
         name: 'voz',
         locale: 'pt-BR',
@@ -80,6 +92,80 @@ void main() {
         gender: 'male',
       );
       expect(brFem, greaterThan(ptMasc));
+      expect(ptMasc, 0);
+    });
+
+    test('qualidade estruturada do Android vence a heurística de nome', () {
+      final alta = pontuarVozParaLeitura(
+        name: 'pt-br-x-ptd-local',
+        locale: 'pt-BR',
+        gender: 'female',
+        quality: 500,
+      );
+      final baixa = pontuarVozParaLeitura(
+        name: 'pt-br-x-ptd-local',
+        locale: 'pt-BR',
+        gender: 'female',
+        quality: 300,
+      );
+      expect(alta, greaterThan(baixa));
+    });
+
+    test('voz de rede (network_required) pontua acima da local', () {
+      final rede = pontuarVozParaLeitura(
+        name: 'pt-br-x-ptd-network',
+        locale: 'pt-BR',
+        gender: 'female',
+        quality: 400,
+        networkRequired: true,
+      );
+      final local = pontuarVozParaLeitura(
+        name: 'pt-br-x-ptd-local',
+        locale: 'pt-BR',
+        gender: 'female',
+        quality: 400,
+      );
+      expect(rede, greaterThan(local));
+    });
+
+    test('qualidade iOS: premium (3) supera enhanced (2) e default (1)', () {
+      final premium = pontuarVozParaLeitura(
+        name: 'com.apple.voice.premium.pt-BR.Luciana',
+        locale: 'pt-BR',
+        gender: 'female',
+        quality: 3,
+      );
+      final enhanced = pontuarVozParaLeitura(
+        name: 'com.apple.voice.enhanced.pt-BR.Luciana',
+        locale: 'pt-BR',
+        gender: 'female',
+        quality: 2,
+      );
+      final compacta = pontuarVozParaLeitura(
+        name: 'com.apple.voice.compact.pt-BR.Luciana',
+        locale: 'pt-BR',
+        gender: 'female',
+        quality: 1,
+      );
+      expect(premium, greaterThan(enhanced));
+      expect(enhanced, greaterThan(compacta));
+    });
+
+    test('voz não instalada é penalizada', () {
+      final instalada = pontuarVozParaLeitura(
+        name: 'pt-br-x-ptd-local',
+        locale: 'pt-BR',
+        gender: 'female',
+        quality: 400,
+      );
+      final naoInstalada = pontuarVozParaLeitura(
+        name: 'pt-br-x-ptd-local',
+        locale: 'pt-BR',
+        gender: 'female',
+        quality: 400,
+        features: {'notInstalled'},
+      );
+      expect(instalada, greaterThan(naoInstalada));
     });
   });
 
@@ -137,6 +223,67 @@ void main() {
         ]),
         isEmpty,
       );
+    });
+
+    test('ignora vozes pt-PT — somente pt-BR é aceito', () {
+      final bruto = <Object>[
+        <String, Object>{
+          'name': 'pt-pt-voz-neural',
+          'locale': 'pt-PT',
+          'gender': 'female',
+        },
+        <String, Object>{
+          'name': 'pt-br-x-ftd-neural-local',
+          'locale': 'pt-BR',
+          'gender': 'female',
+        },
+      ];
+      final vozes = filtrarVozesParaLeitura(bruto);
+      expect(
+        vozes.map((voz) => voz.name).toList(),
+        ['pt-br-x-ftd-neural-local'],
+      );
+    });
+
+    test('prefere voz de rede/qualidade alta à local quando ambas existem', () {
+      final bruto = <Object>[
+        <String, Object>{
+          'name': 'pt-br-x-ptd-local',
+          'locale': 'pt-BR',
+          'gender': 'female',
+          'quality': 400,
+        },
+        <String, Object>{
+          'name': 'pt-br-x-ptd-network',
+          'locale': 'pt-BR',
+          'gender': 'female',
+          'quality': 400,
+          'network_required': true,
+        },
+      ];
+      final vozes = filtrarVozesParaLeitura(bruto);
+      expect(vozes.first.name, 'pt-br-x-ptd-network');
+    });
+
+    test('descarta voz eloquence (robótica) quando há alternativa', () {
+      final bruto = <Object>[
+        <String, Object>{
+          'name': 'com.apple.eloquence.pt-BR.Fiona',
+          'locale': 'pt-BR',
+          'gender': 'female',
+          'quality': 1,
+        },
+        <String, Object>{
+          'name': 'com.apple.voice.enhanced.pt-BR.Luciana',
+          'locale': 'pt-BR',
+          'gender': 'female',
+          'quality': 2,
+        },
+      ];
+      final vozes = filtrarVozesParaLeitura(bruto);
+      final nomes = vozes.map((voz) => voz.name).toList();
+      expect(nomes, isNot(contains('com.apple.eloquence.pt-BR.Fiona')));
+      expect(nomes, contains('com.apple.voice.enhanced.pt-BR.Luciana'));
     });
   });
 

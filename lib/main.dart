@@ -2744,7 +2744,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                 else
                   Text(
                     _ttsDisponivel
-                        ? 'Nenhuma voz pt disponível no dispositivo.'
+                        ? 'Nenhuma voz pt-BR disponível no dispositivo.'
                         : 'Leitura em voz alta não disponível aqui.',
                   ),
                 const SizedBox(height: 10),

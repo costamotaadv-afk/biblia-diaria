@@ -219,7 +219,7 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 
 **B6. Aparelho sem engine TTS em português**
 - **Input:** Android com TTS instalado só em inglês.
-- **Esperado:** `getVoices` filtra pt → lista vazia → tela Ajustes mostra *"Nenhuma voz pt disponível no dispositivo."* ✅
+- **Esperado:** `getVoices` filtra pt-BR → lista vazia → tela Ajustes mostra *"Nenhuma voz pt-BR disponível no dispositivo."* ✅
 - **Impacto se falhar:** dropdown vazio com exception de seleção, ou botões de voz habilitados sem ação.
 
 **B7. `voz_tts_id` salvo aponta para voz que não existe mais**

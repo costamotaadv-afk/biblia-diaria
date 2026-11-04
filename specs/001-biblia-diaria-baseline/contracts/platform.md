@@ -35,9 +35,9 @@ plataformas de desenvolvimento e validação.
 - Idioma fixo `pt-BR` (`setLanguage`), velocidade `0.48` (`_velocidadeFala`),
   pitch padrão — compasso calmo e respeitoso, ideal para meditação e idosos
   (60+).
-- Seleção de voz por `getVoices`: filtra vozes `pt`, descarta motores legados
+- Seleção de voz por `getVoices`: filtra vozes `pt-BR`, descarta motores legados
   (pico/compact/espeak) e prioriza neural/wavenet/enhanced — heurística pura
-  em `leitura_natural.dart`; sem vozes pt → Ajustes mostra "Nenhuma voz pt
+  em `leitura_natural.dart`; sem vozes pt-BR → Ajustes mostra "Nenhuma voz pt-BR
   disponível no dispositivo." (caso B6).
 - A voz escolhida é persistida em `voz_tts_id` (ver `storage.md`). Voz salva que
   deixou de existir → fallback para a melhor voz pt-BR + reescrita da chave
