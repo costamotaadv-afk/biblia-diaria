@@ -189,11 +189,29 @@ contra o repositório aberto), **consultas de demonstração conferidas** e
 - `--pessoa "David"` → 896 versículos citados (mostra os 50 primeiros).
 - `--lugar "Jerusalem"` → 754 versículos citados (mostra os 50 primeiros).
 - `--cronologia 6` → Creation → "God curses Cain" (4004–3875 a.C.).
-- `python -m pytest webapp/tests/` → **101 testes verdes** (inclui cruzamentos,
-  o mapa PT↔EN de nomes e a aba Explorar).
+- `python -m pytest webapp/tests/` → **107 testes verdes** (inclui cruzamentos,
+  o mapa PT↔EN de nomes, a aba Explorar e o backend de voz neural).
 
 ### Como continuar (próximos passos)
 
 1. (Opcional) Portar o cruzamento para o app Flutter (hoje usa JSON, sem
    SQLite; exigiria embutir o banco ou pré-gerar JSON por versículo).
+
+---
+
+## 8. Voz: backend neural opcional + descarte do F5-TTS (2026-11-05)
+
+- **Decisão — F5-TTS descartado.** TTS local com GPU (Diffusion Transformer),
+  descartado por: (a) modelos **CC-BY-NC** (não-comercial), incompatíveis com o
+  app monetizado por anúncio/doação; (b) exige **GPU** (ausente no Streamlit
+  Cloud e no mobile) para a latência desejada; (c) peso (~2 GB + áudio de
+  referência para clonagem) desproporcional a um recurso periférico.
+- **Caminho escolhido:** voz **neural licenciada e sem GPU** como backend
+  opcional atrás da fachada `webapp/ui/tts.py` (Google Cloud TTS
+  `pt-BR-Neural2-*` ou Azure Speech). O **gTTS segue como fallback** — sem
+  configuração, o comportamento é idêntico ao anterior.
+- Arquivos: `webapp/core/tts_neural.py` (stdlib, REST) e
+  `webapp/tests/test_tts_neural.py` (6 testes). Configuração por variáveis de
+  ambiente (`TTS_PROVEDOR`, `TTS_GOOGLE_API_KEY`, `TTS_AZURE_KEY` +
+  `TTS_AZURE_REGION`); detalhes em `webapp/README.md`.
 

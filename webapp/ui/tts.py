@@ -11,11 +11,19 @@ import streamlit as st
 
 from core.catalogo_estudos import rotulo_tipo
 from core.leitura_natural import referencia_para_leitura, texto_para_leitura_natural
+from core import tts_neural
 
 
 @st.cache_data(show_spinner=False)
 def _sintetizar(texto: str, lento: bool) -> bytes:
-    """Gera o MP3 (gTTS divide internamente textos longos — cobre Salmos 119)."""
+    """Gera o MP3: voz neural (se configurada) com fallback para o gTTS."""
+    try:
+        mp3 = tts_neural.sintetizar(texto, lento)
+    except Exception:
+        mp3 = None
+    if mp3:
+        return mp3
+
     from gtts import gTTS  # import lazy: gTTS é opcional e precisa de rede
 
     tts = gTTS(text=texto, lang='pt-br', slow=lento)

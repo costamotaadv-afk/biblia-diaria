@@ -56,3 +56,23 @@ webapp/
   manter `BIBLIA_PERSIST=0` (apenas sessão).
 - **Fonte grande**: `font-size: 18.9px` na raiz (equivale ao `textScaler 1.18`).
 - **Tema escuro**: CSS injetado (claro é o padrão em `.streamlit/config.toml`).
+
+## Voz neural (opcional)
+
+Por padrão o app usa **gTTS**. Para trocar por uma voz neural (licença comercial,
+sem GPU), configure **uma** das variáveis de ambiente abaixo e reinicie:
+
+```bash
+# Google Cloud Text-to-Speech (voz pt-BR-Neural2-C)
+TTS_PROVEDOR=google TTS_GOOGLE_API_KEY="SUA_CHAVE" streamlit run webapp/streamlit_app.py
+
+# Azure Speech (voz pt-BR-FranciscaNeural)
+TTS_PROVEDOR=azure TTS_AZURE_KEY="SUA_CHAVE" TTS_AZURE_REGION="eastus" streamlit run webapp/streamlit_app.py
+```
+
+- `TTS_VOZ` (opcional) troca a voz padrão do provedor.
+- Sem essas variáveis, ou se a chamada neural falhar, o app cai para o **gTTS**
+  automaticamente — a interface `falar*()` não muda.
+
+O **F5-TTS** (TTS local com GPU) foi avaliado e **descartado**: licença CC-BY-NC
+dos modelos e exigência de GPU são incompatíveis com este SaaS.
