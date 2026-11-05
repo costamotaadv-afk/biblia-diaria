@@ -1,7 +1,7 @@
 # Ponto de retomada — Bíblia Diária
 
-**Última atualização:** 2026-10-06
-**Branch:** `master` — feature 002 **commitada** (`fffe5a6`); C6 corrigido (lista lazy)
+**Última atualização:** 2026-11-05
+**Branch:** `master` — HEAD `78a64f8` (voz de leitura pt-BR)
 
 Este arquivo é o "salvar e continuar depois": descreve onde o projeto parou e
 como retomar. Ele pode ser apagado quando a feature 002 for concluída e commitada.
@@ -134,3 +134,48 @@ Estes arquivos não fazem parte do app nem da suíte de testes e geram ~5.900
 - `meu-novo-projeto/` (projeto separado)
 
 > Não foram removidos por não terem sido pedidos; trate-os numa limpeza dedicada.
+
+---
+
+## 7. Base de dados histórica (Theographic) — ponto de retomada
+
+**Status:** pipeline **construído e validado** (banco SQLite gerado e conferido
+contra o repositório aberto) e **consultas de demonstração conferidas**. Falta
+apenas, se desejado, a integração do cruzamento ao app/webapp.
+
+### O que foi feito
+
+- `webapp/core/metadados_biblia.py` — módulo **puro** (só stdlib: `sqlite3`,
+  `json`, `os`, `unicodedata`) com o schema normalizado, a construção do banco
+  e as funções de cruzamento (versículo ↔ pessoas/lugares/eventos/grupos).
+- `tool/construir_metadados.py` — CLI que baixa os JSONs brutos de
+  `robertrouse/theographic-bible-metadata` (cache em `tool/theographic/raw/`),
+  popula `tool/theographic/biblia_metadados.db`, cria os índices pedidos
+  (`idx_verse_metadata_ref`, `idx_verse_people_verse`, `idx_verse_places_verse`)
+  + índices de apoio, e consulta (`--consulta`, `--pessoa`, `--lugar`,
+  `--cronologia`, `--resumo`).
+- `webapp/tests/test_metadados_biblia.py` — **9 testes** das funções puras (verdes).
+- `.gitignore` — `tool/theographic/` (gerado, não versionado).
+
+### Validação (já executada)
+
+- `python tool/construir_metadados.py` →
+  66 livros · 1189 capítulos · 31102 versículos · 3067 pessoas · 1298 lugares ·
+  450 eventos · 23 grupos · 6519 easton.
+  Junções: `verse_people` 28240 · `verse_places` 7534 · `verse_events` 17570.
+  Saída: `[VERIFICAR] OK — contagens e cruzamentos de exemplo consistentes.`
+- `python tool/construir_metadados.py --consulta "João 3:16"` →
+  Pessoas: God, Jesus · Evento: "Jesus and Nicodemus" (27 d.C.).
+
+### Validação (consultas restantes — conferidas em 2026-11-05)
+
+- `--consulta "Gênesis 2:8"` → Pessoas: God · Lugares: Eden · Evento: "Creation of Adam and Eve".
+- `--pessoa "David"` → 896 versículos citados (mostra os 50 primeiros).
+- `--lugar "Jerusalem"` → 754 versículos citados (mostra os 50 primeiros).
+- `--cronologia 6` → Creation → "God curses Cain" (4004–3875 a.C.).
+
+### Como continuar (próximos passos)
+
+1. (Opcional) Integrar o cruzamento ao porte web (`webapp/core/`) e/ou ao
+   Flutter (lembrando que o app hoje usa JSON, sem SQLite).
+

@@ -75,3 +75,6 @@ export_biblia_diaria.zip
 # Cache do comparador de Bíblia (baixado da web, ~4 MB)
 .pt_acf_cache.json
 
+# Base de dados histórica (Theographic) — gerada, não versionada
+tool/theographic/
+
