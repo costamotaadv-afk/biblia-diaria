@@ -4,12 +4,13 @@ import streamlit as st
 
 from core import dados_seguros as ds
 from core import config
+from core import cruzamentos
 from core import data_source
 from core.catalogo_estudos import recursos_aplicaveis
 from core.contexto_historico import contexto_do_salmo
 from core.dados_seguros import texto_de_capitulo_em_livros
 from core.storage import alternar_lista
-from . import painel_contexto, painel_estudos, tts
+from . import painel_contexto, painel_cruzamentos, painel_estudos, tts
 
 
 def render():
@@ -58,8 +59,8 @@ def render():
 
     lento = st.session_state['tts_lento']
 
-    # Ações de versículo (selectbox + Ouvir/Salvar/Compartilhar).
-    c_v, c_o, c_s, c_sh = st.columns([1.8, 1, 1, 1.3])
+    # Ações de versículo (selectbox + Ouvir/Salvar/Cruzamentos/Compartilhar).
+    c_v, c_o, c_s, c_x, c_sh = st.columns([1.8, 1, 1, 1, 1.3])
     with c_v:
         if versiculos:
             idx_vers = st.selectbox(
@@ -82,6 +83,12 @@ def render():
         if st.button('❤️ Salvo' if fav_v else '❤️ Salvar', key='salvar_vers', disabled=not versiculos, use_container_width=True):
             alternar_lista('favoritos_versiculos', chave_versiculo)
             st.rerun()
+    with c_x:
+        if st.button('🔎 Cruzamentos', key='cruzamentos_vers', disabled=not versiculos, use_container_width=True):
+            ref_atual = st.session_state.get('biblia_cruzamentos_ref')
+            st.session_state['biblia_cruzamentos_ref'] = (
+                None if ref_atual == chave_versiculo else chave_versiculo
+            )
     with c_sh:
         if versiculos:
             st.link_button(
@@ -160,3 +167,15 @@ def render():
                 painel_contexto.render_detalhe(contexto, tts_lento=lento)
             else:
                 st.info('Contexto histórico indisponível para este Salmo.')
+
+    # Painel de cruzamentos históricos do versículo selecionado.
+    ref_cruz = st.session_state.get('biblia_cruzamentos_ref')
+    if ref_cruz and ref_cruz == chave_versiculo:
+        st.divider()
+        if not cruzamentos.metadados_disponiveis():
+            st.info(
+                'Base de dados histórica indisponível neste ambiente. '
+                'Gere-a com `python tool/construir_metadados.py`.'
+            )
+        else:
+            painel_cruzamentos.render(cruzamentos.cruzamentos_do_versiculo(ref_cruz))

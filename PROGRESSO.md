@@ -140,8 +140,8 @@ Estes arquivos não fazem parte do app nem da suíte de testes e geram ~5.900
 ## 7. Base de dados histórica (Theographic) — ponto de retomada
 
 **Status:** pipeline **construído e validado** (banco SQLite gerado e conferido
-contra o repositório aberto) e **consultas de demonstração conferidas**. Falta
-apenas, se desejado, a integração do cruzamento ao app/webapp.
+contra o repositório aberto), **consultas de demonstração conferidas** e
+**integração ao porte web concluída** (aba Bíblia → botão 🔎 Cruzamentos).
 
 ### O que foi feito
 
@@ -156,6 +156,12 @@ apenas, se desejado, a integração do cruzamento ao app/webapp.
   `--cronologia`, `--resumo`).
 - `webapp/tests/test_metadados_biblia.py` — **9 testes** das funções puras (verdes).
 - `.gitignore` — `tool/theographic/` (gerado, não versionado).
+- `webapp/core/cruzamentos.py` — fachada fina para o app (localiza o banco,
+  consulta por referência e degrada graciosamente sem ele).
+- `webapp/ui/painel_cruzamentos.py` — painel de exibição (pessoas/lugares/
+  eventos/grupos) com crédito da fonte.
+- `webapp/ui/aba_biblia.py` — botão **🔎 Cruzamentos** no versículo selecionado.
+- `webapp/tests/test_cruzamentos.py` — 3 testes (agregação + degradação).
 
 ### Validação (já executada)
 
@@ -173,9 +179,11 @@ apenas, se desejado, a integração do cruzamento ao app/webapp.
 - `--pessoa "David"` → 896 versículos citados (mostra os 50 primeiros).
 - `--lugar "Jerusalem"` → 754 versículos citados (mostra os 50 primeiros).
 - `--cronologia 6` → Creation → "God curses Cain" (4004–3875 a.C.).
+- `python -m pytest webapp/tests/` → **85 testes verdes** (inclui 3 novos de
+  cruzamentos).
 
 ### Como continuar (próximos passos)
 
-1. (Opcional) Integrar o cruzamento ao porte web (`webapp/core/`) e/ou ao
-   Flutter (lembrando que o app hoje usa JSON, sem SQLite).
+1. (Opcional) Portar o cruzamento para o app Flutter (hoje usa JSON, sem
+   SQLite; exigiria embutir o banco ou pré-gerar JSON por versículo).
 
