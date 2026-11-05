@@ -156,7 +156,7 @@ _ROTULOS_FIXOS = {
     'artigo': 'Artigo',
     'sermao': 'Sermão',
     'palestra': 'Palestra',
-    'momento_historico': 'Momento histórico',
+    'momento_historico': 'Momento Histórico',
 }
 
 

@@ -39,7 +39,7 @@ Categoria estável (extensível apenas por dados):
 | `artigo` | Artigo |
 | `sermao` | Sermão |
 | `palestra` | Palestra |
-| `momento_historico` | Momento histórico |
+| `momento_historico` | Momento Histórico |
 
 Chave desconhecida → rótulo genérico derivado (ex.: `devocional` → "Devocional");
 a ordem de exibição mantém os tipos conhecidos na ordem da tabela e os demais ao

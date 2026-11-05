@@ -304,7 +304,7 @@ Atualizado em: 2026 (acompanha o código-fonte; revise a cada release).
 
 **EST6. Rótulo genérico para tipo desconhecido**
 - **Input:** `tipo: "devocional"` (fora de `tiposConhecidos`) ou `""`.
-- **Esperado:** `rotuloTipo` capitaliza o desconhecido (`"Devocional"`) e usa `"Estudo"` para vazio; tipos conhecidos têm rótulo fixo (`"Sermão"`, `"Momento histórico"`).
+- **Esperado:** `rotuloTipo` capitaliza o desconhecido (`"Devocional"`) e usa `"Estudo"` para vazio; tipos conhecidos têm rótulo fixo (`"Sermão"`, `"Momento Histórico"`).
 - **Impacto se falhar:** tipo desconhecido exibiria a chave técnica (`"momento_historico"`) em vez de um rótulo legível.
 - **Status:** ✅ Coberto por `test/catalogo_estudos_test.dart`.
 

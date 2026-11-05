@@ -186,7 +186,7 @@ const Map<String, String> _rotulosFixos = <String, String>{
   'artigo': 'Artigo',
   'sermao': 'Sermão',
   'palestra': 'Palestra',
-  'momento_historico': 'Momento histórico',
+  'momento_historico': 'Momento Histórico',
 };
 
 /// Rótulo legível do tipo; tipo desconhecido recebe rótulo genérico

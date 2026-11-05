@@ -135,7 +135,7 @@ void main() {
     test('EST6: tipo conhecido tem rótulo fixo; desconhecido é capitalizado',
         () {
       expect(rotuloTipo('sermao'), 'Sermão');
-      expect(rotuloTipo('momento_historico'), 'Momento histórico');
+      expect(rotuloTipo('momento_historico'), 'Momento Histórico');
       expect(rotuloTipo('devocional'), 'Devocional');
       expect(rotuloTipo(''), 'Estudo');
     });
