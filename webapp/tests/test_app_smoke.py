@@ -98,3 +98,16 @@ def test_botao_compartilhar_renderiza_quando_link_definido(monkeypatch):
     assert links[0].proto.url == config.url_whatsapp(
         config.mensagem_compartilhamento()
     )
+
+
+def test_botao_cruzamentos_renderiza_sem_excecao():
+    """Regressão: o botão 🔎 Cruzamentos abre o painel do versículo sem exceção."""
+    at = AppTest.from_file(_APP_PATH, default_timeout=90)
+    at.run()
+
+    at.radio[0].set_value('Bíblia').run()
+    assert not at.exception, at.exception
+
+    botao = next(b for b in at.button if b.label == '🔎 Cruzamentos')
+    botao.click().run()
+    assert not at.exception, at.exception
