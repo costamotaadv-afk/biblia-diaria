@@ -4,6 +4,13 @@ Este documento é o passo a passo para gerar o primeiro **App Bundle** de
 lançamento. As tarefas T037 e T038 dependem de recursos externos e ficam
 **bloqueadas** até que eles existam — este roteiro deixa o caminho pronto.
 
+> **v1 (lançamento atual): SEM anúncios.** Os anúncios estão desativados pela
+> flag `exibirAnuncios = false` em `lib/config.dart` (o SDK do AdMob não
+> inicializa). Por isso a T037 (IDs reais de AdMob) fica adiada, e o
+> Play Console deve ser preenchido com **Ads = Não** e Data safety
+> **"nenhum dado coletado"**. Quando houver conta AdMob, troque a flag para
+> `true` e siga a T037.
+
 ## Pré-requisitos (bloqueadores externos)
 
 1. **Conta AdMob** com um app registrado → IDs de anúncio de produção

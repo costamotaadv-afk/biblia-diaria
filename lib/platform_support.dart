@@ -1,8 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import 'config.dart';
+
 /// O SDK Google Mobile Ads só oferece implementação para Android e iOS.
+/// Também fica desligado enquanto os anúncios estiverem desativados
+/// (`exibirAnuncios`), como na v1 publicada sem anúncios.
 bool get suportaAdMob {
+  if (!exibirAnuncios) return false;
   if (kIsWeb) return false;
   return defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS;

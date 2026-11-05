@@ -26,8 +26,8 @@ android {
     }
 
     defaultConfig {
-        // TODO(T037): trocar pelo Application ID definitivo antes de publicar (Play Console).
-        applicationId = "com.example.biblia_diaria"
+        // ID definitivo da Play Store (não pode mudar após a primeira publicação).
+        applicationId = "br.com.costamota.bibliadiaria"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

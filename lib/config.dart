@@ -4,6 +4,15 @@
 /// (IDs de anúncio de teste em release) da matriz de QA.
 library;
 
+/// Liga/desliga os anúncios (AdMob).
+///
+/// A v1 é publicada SEM anúncios: enquanto `false`, `suportaAdMob` retorna
+/// `false` (o `inicializarAdMob` vira no-op e o banner nunca carrega). Isso
+/// permite responder "nenhum dado coletado" e "Ads = Não" no Play Console.
+/// Quando houver conta AdMob e IDs reais, troque para `true` e preencha os IDs
+/// em `lib/widgets/banner_anuncio.dart`, `AndroidManifest.xml` e `Info.plist`.
+const bool exibirAnuncios = false;
+
 /// Chave Pix (e-mail) que recebe as doações do projeto.
 const String chavePix = 'costamota@gmail.com';
 
