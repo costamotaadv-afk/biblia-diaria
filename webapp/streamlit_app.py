@@ -17,7 +17,7 @@ if str(_APP_DIR) not in sys.path:
 import streamlit as st
 
 from core import storage
-from ui import aba_ajustes, aba_biblia, aba_estudos, aba_inicio, aba_salvos
+from ui import aba_ajustes, aba_biblia, aba_estudos, aba_explorar, aba_inicio, aba_salvos
 
 st.set_page_config(
     page_title='Bíblia Diária',
@@ -28,7 +28,7 @@ st.set_page_config(
 
 storage.inicializar()
 
-_ABAS = ['Início', 'Bíblia', 'Estudos', 'Salvos', 'Ajustes']
+_ABAS = ['Início', 'Bíblia', 'Estudos', 'Salvos', 'Explorar', 'Ajustes']
 
 
 def _injetar_css() -> None:
@@ -68,5 +68,7 @@ elif aba == 'Estudos':
     aba_estudos.render()
 elif aba == 'Salvos':
     aba_salvos.render()
+elif aba == 'Explorar':
+    aba_explorar.render()
 else:
     aba_ajustes.render()

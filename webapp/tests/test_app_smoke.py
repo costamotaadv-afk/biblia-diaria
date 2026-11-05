@@ -111,3 +111,12 @@ def test_botao_cruzamentos_renderiza_sem_excecao():
     botao = next(b for b in at.button if b.label == '🔎 Cruzamentos')
     botao.click().run()
     assert not at.exception, at.exception
+
+
+def test_aba_explorar_renderiza_sem_excecao():
+    """Regressão: a aba Explorar (acervo Theographic) renderiza sem exceção."""
+    at = AppTest.from_file(_APP_PATH, default_timeout=90)
+    at.run()
+
+    at.radio[0].set_value('Explorar').run()
+    assert not at.exception, at.exception

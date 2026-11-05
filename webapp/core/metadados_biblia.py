@@ -758,3 +758,41 @@ def pessoas_de_um_livro(conn, book_order):
         "WHERE vm.book_order = ? ORDER BY p.name", (book_order,)).fetchall()
 
 
+def listar_pessoas(conn, limite=None):
+    """Pessoas em ordem de relevância (verse_count desc, depois nome)."""
+    sql = "SELECT * FROM people ORDER BY verse_count DESC, name"
+    if limite:
+        sql += f" LIMIT {int(limite)}"
+    return conn.execute(sql).fetchall()
+
+
+def listar_lugares(conn, limite=None):
+    """Lugares em ordem de relevância (verse_count desc, depois nome)."""
+    sql = "SELECT * FROM places ORDER BY verse_count DESC, name"
+    if limite:
+        sql += f" LIMIT {int(limite)}"
+    return conn.execute(sql).fetchall()
+
+
+def buscar_easton(conn, termo):
+    """Verbete do dicionário Easton por ``term_label`` ou ``dict_lookup``."""
+    return conn.execute(
+        "SELECT * FROM easton WHERE lower(term_label) = lower(?) "
+        "OR lower(dict_lookup) = lower(?) LIMIT 1",
+        (termo, termo)).fetchone()
+
+
+def sugerir_easton(conn, termo, limite=20):
+    """Verbetes cujo termo contém ``termo`` (sem caixa), para sugestões.
+
+    Deduplicado por ``term_label`` (o Theographic tem pessoas homônimas com
+    verbetes repetidos).
+    """
+    return conn.execute(
+        "SELECT MIN(easton_id) AS easton_id, term_label, "
+        "MIN(dict_lookup) AS dict_lookup FROM easton "
+        "WHERE lower(term_label) LIKE lower(?) "
+        "GROUP BY term_label ORDER BY term_label LIMIT ?",
+        (f"%{termo}%", int(limite))).fetchall()
+
+

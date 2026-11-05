@@ -141,7 +141,8 @@ Estes arquivos não fazem parte do app nem da suíte de testes e geram ~5.900
 
 **Status:** pipeline **construído e validado** (banco SQLite gerado e conferido
 contra o repositório aberto), **consultas de demonstração conferidas** e
-**integração ao porte web concluída** (aba Bíblia → botão 🔎 Cruzamentos).
+**integração ao porte web concluída** (cruzamentos na aba Bíblia + aba
+🧭 Explorar com pessoas/lugares/cronologia/dicionário).
 
 ### O que foi feito
 
@@ -165,6 +166,12 @@ contra o repositório aberto), **consultas de demonstração conferidas** e
 - `webapp/core/nomes_pt.py` — mapa manual PT↔EN curado (323 entradas: pessoas/
   lugares/grupos/eventos mais citados), usado no painel e no CLI.
 - `webapp/tests/test_nomes_pt.py` — testes do mapa de nomes (tradução + fallback).
+- `webapp/core/exploracao.py` — fachada de exploração (pessoas/lugares/
+  cronologia/dicionário Easton), degradando sem banco.
+- `webapp/ui/aba_explorar.py` — nova aba **🧭 Explorar** (Pessoas, Lugares,
+  Linha do tempo, Dicionário) com salto para a aba Bíblia.
+- `webapp/tests/test_exploracao.py` — 7 testes (ordenação, busca Easton, dedup,
+  degradação).
 
 ### Validação (já executada)
 
@@ -182,8 +189,8 @@ contra o repositório aberto), **consultas de demonstração conferidas** e
 - `--pessoa "David"` → 896 versículos citados (mostra os 50 primeiros).
 - `--lugar "Jerusalem"` → 754 versículos citados (mostra os 50 primeiros).
 - `--cronologia 6` → Creation → "God curses Cain" (4004–3875 a.C.).
-- `python -m pytest webapp/tests/` → **93 testes verdes** (inclui cruzamentos e
-  o mapa PT↔EN de nomes).
+- `python -m pytest webapp/tests/` → **101 testes verdes** (inclui cruzamentos,
+  o mapa PT↔EN de nomes e a aba Explorar).
 
 ### Como continuar (próximos passos)
 
