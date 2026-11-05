@@ -35,6 +35,7 @@ if _WEBAPP not in sys.path:
     sys.path.insert(0, _WEBAPP)
 
 from core import metadados_biblia as md  # noqa: E402
+from core import nomes_pt  # noqa: E402
 
 BASE_URL = "https://raw.githubusercontent.com/robertrouse/theographic-bible-metadata/master/json/"
 ARQUIVOS = ["books", "chapters", "verses", "people", "places", "events", "peopleGroups", "easton"]
@@ -128,7 +129,7 @@ def _exibir_pessoa(conn, nome, limite=50):
     if p is None:
         print(f"Pessoa não encontrada: {nome}")
         return 1
-    print(f"{p['name']}  (id={p['person_id']}, lookup={p['person_lookup']})")
+    print(f"{nomes_pt.traduzir(p['name'])}  (id={p['person_id']}, lookup={p['person_lookup']})")
     if p["display_title"] and p["display_title"] != p["name"]:
         print(f"  título: {p['display_title']}")
     if p["gender"]:
@@ -150,7 +151,7 @@ def _exibir_lugar(conn, nome, limite=50):
     if l is None:
         print(f"Lugar não encontrado: {nome}")
         return 1
-    print(f"{l['name']}  (id={l['place_id']}, lookup={l['place_lookup']})")
+    print(f"{nomes_pt.traduzir(l['name'])}  (id={l['place_id']}, lookup={l['place_lookup']})")
     if l["display_title"] and l["display_title"] != l["name"]:
         print(f"  título: {l['display_title']}")
     if l["feature_type"]:
@@ -180,14 +181,14 @@ def consultar_versiculo(ref):
         eventos = md.eventos_do_versiculo(conn, v["verse_id"])
         grupos = md.grupos_do_versiculo(conn, v["verse_id"])
         print(f"  Pessoas ({len(pessoas)}):",
-              ", ".join(p["name"] for p in pessoas) or "(nenhuma)")
+              ", ".join(nomes_pt.traduzir(p["name"]) for p in pessoas) or "(nenhuma)")
         print(f"  Lugares ({len(lugares)}):",
-              ", ".join(l["name"] for l in lugares) or "(nenhum)")
+              ", ".join(nomes_pt.traduzir(l["name"]) for l in lugares) or "(nenhum)")
         print(f"  Grupos ({len(grupos)}):",
-              ", ".join(g["group_name"] for g in grupos) or "(nenhum)")
+              ", ".join(nomes_pt.traduzir(g["group_name"]) for g in grupos) or "(nenhum)")
         print(f"  Eventos ({len(eventos)}):")
         for e in eventos:
-            print(f"    • {e['title']}  ({md.rotulo_ano(e['start_date']) or 'sem data'})")
+            print(f"    • {nomes_pt.traduzir(e['title'])}  ({md.rotulo_ano(e['start_date']) or 'sem data'})")
         return 0
     finally:
         conn.close()

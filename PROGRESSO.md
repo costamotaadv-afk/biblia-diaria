@@ -162,6 +162,9 @@ contra o repositório aberto), **consultas de demonstração conferidas** e
   eventos/grupos) com crédito da fonte.
 - `webapp/ui/aba_biblia.py` — botão **🔎 Cruzamentos** no versículo selecionado.
 - `webapp/tests/test_cruzamentos.py` — 3 testes (agregação + degradação).
+- `webapp/core/nomes_pt.py` — mapa manual PT↔EN curado (323 entradas: pessoas/
+  lugares/grupos/eventos mais citados), usado no painel e no CLI.
+- `webapp/tests/test_nomes_pt.py` — testes do mapa de nomes (tradução + fallback).
 
 ### Validação (já executada)
 
@@ -179,8 +182,8 @@ contra o repositório aberto), **consultas de demonstração conferidas** e
 - `--pessoa "David"` → 896 versículos citados (mostra os 50 primeiros).
 - `--lugar "Jerusalem"` → 754 versículos citados (mostra os 50 primeiros).
 - `--cronologia 6` → Creation → "God curses Cain" (4004–3875 a.C.).
-- `python -m pytest webapp/tests/` → **85 testes verdes** (inclui 3 novos de
-  cruzamentos).
+- `python -m pytest webapp/tests/` → **93 testes verdes** (inclui cruzamentos e
+  o mapa PT↔EN de nomes).
 
 ### Como continuar (próximos passos)
 
