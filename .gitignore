@@ -78,3 +78,9 @@ export_biblia_diaria.zip
 # Base de dados histórica (Theographic) — gerada, não versionada
 tool/theographic/
 
+# Ambiente virtual Python (dev local via tool/dev_localhost.ps1)
+.venv/
+
+# PIDs dos serviços locais (tool/dev_localhost.ps1)
+build/dev-pids.json
+

@@ -165,6 +165,27 @@ reutilizados de `assets/data`). Para publicar gratuitamente no Streamlit Cloud
 e obter um link para encaminhar, siga o passo a passo em
 [`docs/DEPLOY_STREAMLIT.md`](docs/DEPLOY_STREAMLIT.md).
 
+### Rodar localmente (dois serviços independentes)
+
+Para testar os dois apps no navegador ao mesmo tempo (Streamlit + Flutter Web):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool\dev_localhost.ps1
+```
+
+- **Streamlit**: http://127.0.0.1:8501 — recarrega no navegador após editar o Python.
+- **Flutter Web (hot reload)**: http://127.0.0.1:7357 — aperte `r` na janela do Flutter.
+
+Para encerrar os dois:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool\stop_localhost.ps1
+```
+
+Opções do `dev_localhost.ps1`: `-OnlyStreamlit`, `-OnlyFlutter`, `-NoBrowser`,
+`-FlutterChrome`, `-SkipVenv`, `-StreamlitPort`, `-FlutterPort`.
+(A porta 8080 fica reservada ao `tool/servir_app.ps1`, que serve o build estático.)
+
 Resumo rápido:
 
 1. Confirme que o repositório está no GitHub (já está:
