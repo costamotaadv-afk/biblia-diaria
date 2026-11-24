@@ -90,3 +90,19 @@ carregar_livro = _cache(_carregar_livro)
 carregar_estudos_indice = _cache(_carregar_estudos_indice)
 carregar_estudos_livro = _cache(_carregar_estudos_livro)
 carregar_contexto_livro = _cache(_carregar_contexto_livro)
+
+
+def _carregar_todos_os_livros():
+    """Carrega os 66 livros (usado pela busca na Bíblia; cacheado)."""
+    livros = []
+    for item in carregar_indice():
+        nome = item.get('nome')
+        if not nome:
+            continue
+        livro = carregar_livro(nome)
+        if livro is not None:
+            livros.append(livro)
+    return livros
+
+
+carregar_todos_os_livros = _cache(_carregar_todos_os_livros)

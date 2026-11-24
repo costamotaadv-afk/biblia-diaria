@@ -4,6 +4,8 @@ Sem regra de negócio: recebe recursos já prontos e callbacks, espelhando
 ``lib/widgets/painel_estudos.dart``.
 """
 
+import html
+
 import streamlit as st
 
 from core import data_source
@@ -26,17 +28,24 @@ def render_recurso(recurso, favoritos, on_alternar, tts_lento=False):
     titulo = recurso.titulo if recurso.titulo else rotulo_tipo(recurso.tipo)
     credito = recurso.fonte.credito if recurso.tem_fonte else ''
 
-    with st.container(border=True):
+    with st.container(border=True, key=f'card_recurso_{recurso.id}'):
         st.markdown(f'**{titulo}**')
         if recurso.referencia:
             st.markdown(f'*{rotulo_tipo(recurso.tipo)} • {recurso.referencia}*')
         if recurso.tem_periodo:
             st.markdown(f'🕰️ {recurso.periodo}')
-        st.markdown(recurso.corpo if recurso.tem_corpo else 'Conteúdo não disponível.')
+        corpo = recurso.corpo if recurso.tem_corpo else 'Conteúdo não disponível.'
+        st.markdown(
+            f'<div class="bd-study-body">{html.escape(corpo)}</div>',
+            unsafe_allow_html=True,
+        )
         if recurso.tem_fatos:
             st.markdown('**Fatos que iluminam o texto**')
             for fato in recurso.fatos:
-                st.markdown(f'• {fato}')
+                st.markdown(
+                    f'<div class="bd-study-body">• {html.escape(fato)}</div>',
+                    unsafe_allow_html=True,
+                )
         if credito:
             st.caption(f'Fonte: {credito}')
 

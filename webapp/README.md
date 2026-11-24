@@ -54,8 +54,14 @@ webapp/
   em `webapp/.state/prefs.json` só ocorre com `BIBLIA_PERSIST=1`. No Streamlit
   Cloud, o filesystem é efêmero e compartilhado entre usuários — recomendado
   manter `BIBLIA_PERSIST=0` (apenas sessão).
-- **Fonte grande**: `font-size: 18.9px` na raiz (equivale ao `textScaler 1.18`).
-- **Tema escuro**: CSS injetado (claro é o padrão em `.streamlit/config.toml`).
+- **Aparência**: 3 temas (claro/escuro/sépia), escala de texto 100–160% (padrão
+  118%) e espaçamento de linha 1,4–1,8 — espelhando `lib/tema.dart`. A fonte
+  **Lora** é servida de `webapp/static/fonts/` (via `enableStaticServing`).
+- **Navegação**: 5 abas como o Flutter; o acervo **Explorar** (Theographic,
+  exclusivo do Streamlit) fica em Estudos → Explorar.
+- **Paridade funcional**: busca na Bíblia, progresso de leitura, destaques e
+  anotações foram portados de `lib/busca_biblia.dart`, `lib/progresso_leitura.dart`
+  e `lib/destaques.dart`.
 
 ## Voz neural (opcional)
 
@@ -76,3 +82,28 @@ TTS_PROVEDOR=azure TTS_AZURE_KEY="SUA_CHAVE" TTS_AZURE_REGION="eastus" streamlit
 
 O **F5-TTS** (TTS local com GPU) foi avaliado e **descartado**: licença CC-BY-NC
 dos modelos e exigência de GPU são incompatíveis com este SaaS.
+
+## Paridade visual e funcional (Flutter × Streamlit)
+
+O webapp reproduz a identidade visual do app Flutter (`lib/tema.dart`): paleta
+dourado/creme, tipografia **Lora** (versículos/estudos), cartões com raio 18,
+botões de 52 px (raio 14), navegação em pílulas e títulos centrados. O CSS fica
+centralizado em `webapp/ui/tema.py` e usa seletores validados no DOM do
+Streamlit 1.56 (`button[kind=...]`, `label[data-testid="stRadioOption"]`,
+`st.container(key=...)` → `.st-key-*`, `st.pills` → `button[role="radio"]`).
+
+Capturas comparativas (mesma largura e mesmos dados) são geradas por
+`tool/capturar_telas.py` (Playwright) em `docs/capturas/`, nos viewports
+1280×800 e 390×844.
+
+### Diferenças remanescentes (vs. Flutter)
+
+- **AdMob**: ausente na web (igual nos dois).
+- **TTS**: uma voz pt-BR do servidor (gTTS/neural) em vez das vozes do aparelho;
+  sem seletor masculino/feminino; áudio inline, sem FAB global de play/pause.
+- **Compartilhar**: link do WhatsApp em vez da folha nativa.
+- **Explorar** (Theographic) existe apenas no Streamlit, em Estudos → Explorar.
+- **Persistência**: só preferências são persistidas; a navegação é por sessão
+  (o app abre sempre na aba Início, como o Flutter).
+- **Chrome do Streamlit** (menu/rodapé/toolbar) é ocultado para parecer app;
+  ícones emoji em vez dos Material Symbols.

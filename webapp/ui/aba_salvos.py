@@ -1,5 +1,7 @@
 """Aba Salvos: capítulos, versículos e recursos de estudo salvos."""
 
+import html
+
 import streamlit as st
 
 from core import data_source
@@ -13,8 +15,7 @@ from . import painel_estudos, tts
 
 
 def _nome_livro_da_chave(indice, chave):
-    """Resolve o nome do livro a partir da chave, varrendo o índice de trás para
-    frente e casando o prefixo mais longo (B11/E14)."""
+    """Resolve o nome do livro a partir da chave (prefixo mais longo)."""
     for item in reversed(indice):
         nome = f"{item.get('nome')}"
         if chave.startswith(nome + ' '):
@@ -35,48 +36,77 @@ def render():
     lento = st.session_state['tts_lento']
 
     if capitulos:
-        st.markdown('### Capítulos salvos')
+        st.markdown(
+            '<div class="bd-section">Capítulos salvos</div>',
+            unsafe_allow_html=True,
+        )
         for chave in capitulos:
             nome = _nome_livro_da_chave(indice, chave)
             livro = data_source.carregar_livro(nome) if nome else None
             texto = texto_de_capitulo_em_livros([livro], chave) if livro else None
-            with st.container(border=True):
-                st.markdown(f'**{chave}**')
+            with st.container(border=True, key=f'card_salvo_cap_{chave}'):
+                st.markdown(f'**{html.escape(chave)}**')
                 if texto is None:
                     st.markdown('Conteúdo não encontrado.')
-                c1, c2 = st.columns([1, 1])
-                if c1.button('🔊 Ouvir capítulo', key=f'ouvir_cap_{chave}', disabled=not texto, use_container_width=True):
-                    tts.falar_capitulo(chave, texto, lento)
-                if c2.button('🗑️ Remover capítulo salvo', key=f'rem_cap_{chave}', use_container_width=True):
-                    alternar_lista('favoritos_capitulos', chave)
-                    st.rerun()
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button(
+                        '🔊 Ouvir',
+                        key=f'ouvir_cap_{chave}',
+                        disabled=not texto,
+                        width='stretch',
+                    ):
+                        tts.falar_capitulo(chave, texto, lento)
+                with c2:
+                    if st.button('🗑️ Remover', key=f'rem_cap_{chave}', width='stretch'):
+                        alternar_lista('favoritos_capitulos', chave)
+                        st.rerun()
 
     if versiculos:
-        st.markdown('### Versículos salvos')
+        st.markdown(
+            '<div class="bd-section">Versículos salvos</div>',
+            unsafe_allow_html=True,
+        )
         for chave in versiculos:
             nome = _nome_livro_da_chave(indice, chave)
             livro = data_source.carregar_livro(nome) if nome else None
             texto = texto_de_versiculo_em_livros([livro], chave) if livro else None
-            with st.container(border=True):
-                st.markdown(f'**{chave}**')
-                st.markdown(texto if texto else 'Conteúdo não encontrado.')
-                c1, c2 = st.columns([1, 1])
-                if c1.button('🔊 Ouvir versículo', key=f'ouvir_vers_{chave}', disabled=not texto, use_container_width=True):
-                    tts.falar_versiculo(chave, texto, lento)
-                if c2.button('🗑️ Remover versículo salvo', key=f'rem_vers_{chave}', use_container_width=True):
-                    alternar_lista('favoritos_versiculos', chave)
-                    st.rerun()
+            with st.container(border=True, key=f'card_salvo_vers_{chave}'):
+                st.markdown(f'**{html.escape(chave)}**')
+                if texto:
+                    st.markdown(
+                        f'<div class="bd-verse">{html.escape(texto)}</div>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown('Conteúdo não encontrado.')
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button(
+                        '🔊 Ouvir',
+                        key=f'ouvir_vers_{chave}',
+                        disabled=not texto,
+                        width='stretch',
+                    ):
+                        tts.falar_versiculo(chave, texto, lento)
+                with c2:
+                    if st.button('🗑️ Remover', key=f'rem_vers_{chave}', width='stretch'):
+                        alternar_lista('favoritos_versiculos', chave)
+                        st.rerun()
 
     if estudos:
-        st.markdown('### Recursos de estudo salvos')
+        st.markdown(
+            '<div class="bd-section">Recursos de estudo salvos</div>',
+            unsafe_allow_html=True,
+        )
         indice_estudos = data_source.carregar_estudos_indice()
         for id_ in estudos:
             resumo = next((r for r in indice_estudos if r.id == id_), None)
-            with st.container(border=True):
+            with st.container(border=True, key=f'card_salvo_est_{id_}'):
                 if resumo is None:
-                    st.markdown(f'**{id_}**')
+                    st.markdown(f'**{html.escape(id_)}**')
                     st.markdown('Conteúdo não encontrado.')
-                    if st.button('🗑️ Remover recurso salvo', key=f'rem_est_{id_}'):
+                    if st.button('🗑️ Remover', key=f'rem_est_{id_}', width='stretch'):
                         alternar_lista('favoritos_estudos', id_)
                         st.rerun()
                 else:
@@ -86,12 +116,27 @@ def render():
                         if resumo.referencia
                         else rotulo_tipo(resumo.tipo)
                     )
-                    st.markdown(f'**{titulo}**')
-                    st.markdown(f'*{rotulo_tipo(resumo.tipo)} • {subtitulo}*')
-                    c1, c2 = st.columns([1, 1])
-                    if c1.button('🔊 Ouvir', key=f'ouvir_est_{id_}', use_container_width=True):
+                    st.markdown(f'**{html.escape(titulo)}**')
+                    st.markdown(
+                        f'<span class="bd-sub">{html.escape(rotulo_tipo(resumo.tipo))}'
+                        f' • {html.escape(subtitulo)}</span>',
+                        unsafe_allow_html=True,
+                    )
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button('🔊 Ouvir', key=f'ouvir_est_{id_}', width='stretch'):
+                            recurso = painel_estudos.recurso_completo(resumo)
+                            tts.falar_recurso(recurso, lento)
+                    with c2:
+                        if st.button('🗑️ Remover', key=f'rem_est_{id_}', width='stretch'):
+                            alternar_lista('favoritos_estudos', id_)
+                            st.rerun()
+                    with st.expander('📖 Abrir recurso'):
                         recurso = painel_estudos.recurso_completo(resumo)
-                        tts.falar_recurso(recurso, lento)
-                    if c2.button('🗑️ Remover recurso salvo', key=f'rem_est_{id_}', use_container_width=True):
-                        alternar_lista('favoritos_estudos', id_)
-                        st.rerun()
+                        painel_estudos.render_recurso(
+                            recurso,
+                            st.session_state['favoritos_estudos'],
+                            lambda i: alternar_lista('favoritos_estudos', i),
+                            tts_lento=lento,
+                        )
+

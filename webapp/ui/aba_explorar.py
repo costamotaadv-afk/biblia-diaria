@@ -24,13 +24,16 @@ def render():
         )
         return
 
-    modo = st.radio(
+    modo = st.pills(
         'Explorar',
         ['Pessoas', 'Lugares', 'Linha do tempo', 'Dicionário'],
         key='explorar_modo',
-        horizontal=True,
+        selection_mode='single',
+        default='Pessoas',
         label_visibility='collapsed',
     )
+    if modo is None:
+        modo = 'Pessoas'
     if modo == 'Pessoas':
         _render_pessoas()
     elif modo == 'Lugares':

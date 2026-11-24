@@ -6,6 +6,7 @@ navegação e aba Início) sem servidor.
 
 from pathlib import Path
 
+import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 # Caminho absoluto do app — independe do diretório de trabalho do pytest.
@@ -19,7 +20,7 @@ def test_app_inicio_renderiza_sem_excecao():
 
     textos = [m.value for m in at.markdown]
     assert any('Bíblia Diária' in t for t in textos)
-    assert any('Versículo do Dia' in t for t in textos)
+    assert any('VERSÍCULO DO DIA' in t for t in textos)
     assert any('Mensagem para você' in t for t in textos)
 
 
@@ -72,12 +73,13 @@ def test_referencia_cruzada_navega_para_biblia_sem_excecao():
     assert at.selectbox[0].value  # livro da referência já pré-selecionado
 
 
-def test_botao_compartilhar_oculto_com_link_vazio():
-    """SH3: sem link definido, o botão de compartilhar não é renderizado."""
+def test_botao_compartilhar_app_oculto_com_link_vazio():
+    """SH3: sem link definido, o botão de compartilhar o app não é renderizado."""
     at = AppTest.from_file(_APP_PATH, default_timeout=90)
     at.run()
     assert not at.exception, at.exception
-    assert at.get('link_button') == []
+    labels = [l.proto.label for l in at.get('link_button')]
+    assert '📲 Compartilhar no WhatsApp' not in labels
 
 
 def test_botao_compartilhar_renderiza_quando_link_definido(monkeypatch):
@@ -93,11 +95,20 @@ def test_botao_compartilhar_renderiza_quando_link_definido(monkeypatch):
     assert not at.exception, at.exception
 
     links = at.get('link_button')
-    assert len(links) == 1
-    assert links[0].proto.label == '📲 Compartilhar no WhatsApp'
-    assert links[0].proto.url == config.url_whatsapp(
+    app_link = next(
+        l for l in links if l.proto.label == '📲 Compartilhar no WhatsApp'
+    )
+    assert app_link.proto.url == config.url_whatsapp(
         config.mensagem_compartilhamento()
     )
+
+
+def test_navegacao_tem_cinco_abas():
+    """A navegação tem 5 destinos (sem Explorar no topo, como o Flutter)."""
+    at = AppTest.from_file(_APP_PATH, default_timeout=90)
+    at.run()
+    assert not at.exception, at.exception
+    assert at.radio[0].options == ['Início', 'Bíblia', 'Estudos', 'Salvos', 'Ajustes']
 
 
 def test_botao_cruzamentos_renderiza_sem_excecao():
@@ -114,9 +125,18 @@ def test_botao_cruzamentos_renderiza_sem_excecao():
 
 
 def test_aba_explorar_renderiza_sem_excecao():
-    """Regressão: a aba Explorar (acervo Theographic) renderiza sem exceção."""
-    at = AppTest.from_file(_APP_PATH, default_timeout=90)
-    at.run()
+    """Regressão: o acervo Explorar (agora dentro de Estudos) renderiza sem exceção."""
 
-    at.radio[0].set_value('Explorar').run()
+    def app():
+        import streamlit as st
+
+        from core import storage
+        from ui import aba_explorar
+
+        storage.inicializar()
+        st.session_state['explorar_modo'] = 'Pessoas'
+        aba_explorar.render()
+
+    at = AppTest.from_function(app, default_timeout=90)
+    at.run()
     assert not at.exception, at.exception

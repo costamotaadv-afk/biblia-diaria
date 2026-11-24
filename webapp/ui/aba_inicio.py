@@ -1,11 +1,13 @@
-"""Aba Início: data, versículo do dia, mensagem e atalhos."""
+"""Aba Início: data, versículo do dia, mensagem, progresso e atalhos."""
 
 import datetime
+import html
 
 import streamlit as st
 
 from core import config
 from core import data_source
+from core import progresso_leitura
 from core.dados_seguros import dias_desde_epoca, selecionar_versiculo_do_dia
 from core.formato_data import formatar_data_extenso
 from core.storage import alternar_lista
@@ -13,12 +15,7 @@ from . import tts
 
 
 def _ir_para_aba(aba: str) -> None:
-    """Callback de navegação: troca a aba sem violar o estado do widget ``aba``.
-
-    Usado em ``st.button(..., on_click=...)``, que executa antes da reinicialização
-    do script; assim, atualizar ``st.session_state['aba']`` não dispara o
-    ``StreamlitAPIException`` de "widget já instanciado".
-    """
+    """Callback de navegação: troca a aba sem violar o estado do widget ``aba``."""
     st.session_state['aba'] = aba
 
 
@@ -39,41 +36,94 @@ def render():
     is_fav = referencia in st.session_state['favoritos_versiculos']
     lento = st.session_state['tts_lento']
 
-    st.markdown(f'*{formatar_data_extenso(hoje)}*')
+    st.markdown(
+        f'<div class="bd-data">{html.escape(formatar_data_extenso(hoje))}</div>',
+        unsafe_allow_html=True,
+    )
 
-    with st.container(border=True):
-        st.markdown('### 📖 Versículo do Dia')
-        st.markdown(f'*"{versiculo}"*')
-        st.markdown(f'**{referencia}**')
-        c1, c2 = st.columns([1, 1])
-        if c1.button(
-            '🔊 Ouvir versículo',
-            disabled=not referencia,
-            use_container_width=True,
-        ):
-            tts.falar_versiculo(referencia, versiculo, lento)
-        if c2.button(
-            '❤️ Salvo' if is_fav else '❤️ Salvar versículo',
-            disabled=not referencia,
-            use_container_width=True,
-        ):
-            alternar_lista('favoritos_versiculos', referencia)
-            st.rerun()
+    # Cartão do Versículo do Dia (gradiente + aspas + 3 ações).
+    with st.container(border=True, key='card_inicio_versiculo'):
+        st.markdown(
+            '<div class="bd-rotulo">📖 VERSÍCULO DO DIA</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div class="bd-quote">“{html.escape(versiculo)}”</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div class="bd-ref">{html.escape(referencia)}</div>',
+            unsafe_allow_html=True,
+        )
+        st.divider()
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if st.button(
+                '🔊 Ouvir',
+                key='ouvir_dia',
+                disabled=not referencia,
+                width='stretch',
+            ):
+                tts.falar_versiculo(referencia, versiculo, lento)
+        with c2:
+            if st.button(
+                '⭐ Salvo' if is_fav else '⭐ Favoritar',
+                key='fav_dia',
+                disabled=not referencia,
+                width='stretch',
+            ):
+                alternar_lista('favoritos_versiculos', referencia)
+                st.rerun()
+        with c3:
+            if referencia:
+                st.link_button(
+                    '📤 Compartilhar',
+                    config.url_whatsapp(config.mensagem_versiculo(referencia, versiculo)),
+                    type='secondary',
+                    width='stretch',
+                )
 
-    with st.container(border=True):
-        st.markdown('### 💌 Mensagem para você')
-        st.markdown(mensagem)
+    # Cartão "Mensagem para você" centralizado.
+    with st.container(border=True, key='card_inicio_mensagem'):
+        st.markdown(
+            '<div style="text-align:center; font-weight:700;">'
+            '❤️ Mensagem para você</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div style="text-align:center; font-size:1.06rem; '
+            f'line-height:1.45;">{html.escape(mensagem)}</div>',
+            unsafe_allow_html=True,
+        )
 
+    # Cartão de progresso de leitura.
+    lidos_set = set(st.session_state['capitulos_lidos'])
+    total = progresso_leitura.total_de_capitulos(indice)
+    lidos = progresso_leitura.contar_capitulos_lidos(indice, lidos_set)
+    fracao = progresso_leitura.fracao_lida(indice, lidos_set)
+    percentual = round(fracao * 100)
+    with st.container(border=True, key='card_inicio_progresso'):
+        st.markdown(
+            f'<div class="bd-section">📈 Progresso de leitura '
+            f'<span style="float:right; color:var(--bd-primary);">{percentual}%</span></div>',
+            unsafe_allow_html=True,
+        )
+        st.progress(fracao)
+        st.caption(f'{lidos} de {total} capítulos lidos')
+
+    # Ações principais (preenchida + contornada).
     c3, c4 = st.columns([1, 1])
     c3.button(
         '📖 Ler a Bíblia',
-        use_container_width=True,
+        type='primary',
+        width='stretch',
         on_click=_ir_para_aba,
         args=('Bíblia',),
     )
     c4.button(
         '🔖 Salvos',
-        use_container_width=True,
+        type='secondary',
+        width='stretch',
         on_click=_ir_para_aba,
         args=('Salvos',),
     )
@@ -85,3 +135,4 @@ def render():
             type='primary',
             width='stretch',
         )
+

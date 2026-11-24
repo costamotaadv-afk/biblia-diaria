@@ -4,6 +4,8 @@ Sem regra de negócio; espelha ``lib/widgets/painel_contexto_historico.dart`` e
 ``lib/widgets/tela_contexto_historico.dart``.
 """
 
+import html
+
 import streamlit as st
 
 from core import dados_seguros as ds
@@ -85,7 +87,10 @@ def render_detalhe(contexto, tts_lento=False):
 
     if contexto.tem_contexto_politico:
         st.markdown('**Contexto político e social**')
-        st.markdown(contexto.contexto_politico)
+        st.markdown(
+            f'<div class="bd-study-body">{html.escape(contexto.contexto_politico)}</div>',
+            unsafe_allow_html=True,
+        )
 
     if contexto.tem_eventos:
         st.markdown('**Acontecimentos históricos relacionados**')
@@ -94,7 +99,10 @@ def render_detalhe(contexto, tts_lento=False):
 
     if contexto.tem_localizacao:
         st.markdown('**Localização geográfica**')
-        st.markdown(contexto.localizacao)
+        st.markdown(
+            f'<div class="bd-study-body">{html.escape(contexto.localizacao)}</div>',
+            unsafe_allow_html=True,
+        )
 
     if contexto.tem_referencias:
         st.markdown('**Referências bíblicas cruzadas**')
@@ -109,7 +117,10 @@ def render_detalhe(contexto, tts_lento=False):
 
     if contexto.tem_explicacao:
         st.markdown('**Explicação histórica**')
-        st.markdown(contexto.explicacao)
+        st.markdown(
+            f'<div class="bd-study-body">{html.escape(contexto.explicacao)}</div>',
+            unsafe_allow_html=True,
+        )
 
     st.caption(explicacao_certeza(contexto.certeza))
 
