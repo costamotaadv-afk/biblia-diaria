@@ -104,6 +104,25 @@ function Resolve-FlutterInvoke {
     throw 'flutter/puro não encontrado. Instale o puro (https://puro.dev).'
 }
 
+function Resolve-FlutterWebSdkRoot {
+    # Retorna o caminho FÍSICO do cache compartilhado apontado pelo symlink
+    # flutter_web_sdk. Necessário porque o frontend_server web não resolve o
+    # symlink ("SDK root directory not found") quando o FLUTTER_ROOT vem relativo.
+    foreach ($e in @('stable', 'default')) {
+        $link = Join-Path $env:USERPROFILE ".puro\envs\$e\flutter\bin\cache\flutter_web_sdk"
+        if (Test-Path $link) {
+            $item = Get-Item -LiteralPath $link -ErrorAction SilentlyContinue
+            if ($item) {
+                $target = $item.Target
+                if ($target -is [array]) { $target = $target[0] }
+                if ($target -and (Test-Path -LiteralPath $target)) { return $target }
+            }
+            return $link
+        }
+    }
+    return $null
+}
+
 function Save-Pids {
     $obj = New-Object -TypeName psobject
     if ($streamlitPid) { $obj | Add-Member -NotePropertyName streamlit -NotePropertyValue ([int]$streamlitPid) }
@@ -146,7 +165,17 @@ if ($OnlyStreamlit) {
     $device = if ($FlutterChrome) { 'chrome' } else { 'web-server' }
     Write-Host "[Flutter] subindo em $FlutterUrl (device=$device) ..." -ForegroundColor Cyan
 
+    # Workaround puro: apontar --sdk-root para o alvo FÍSICO do flutter_web_sdk
+    # (o compilador web não resolve o symlink => "SDK root directory not found").
+    $webSdkFisico = Resolve-FlutterWebSdkRoot
+    if ($webSdkFisico) {
+        Write-Host "[Flutter] sdk-root físico: $webSdkFisico" -ForegroundColor DarkGray
+    }
+
     $inner = "Set-Location -LiteralPath '$Root'; $flutterInvoke run -d $device --web-hostname 127.0.0.1 --web-port $FlutterPort"
+    if ($webSdkFisico) {
+        $inner += " '--extra-front-end-options=--sdk-root=$webSdkFisico/'"
+    }
     $argStr = "-NoExit -NoProfile -Command `"$inner`""
     $proc = Start-Process powershell.exe -ArgumentList $argStr -WorkingDirectory $Root -PassThru
     $flutterPid = $proc.Id
