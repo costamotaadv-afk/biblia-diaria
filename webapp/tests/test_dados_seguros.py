@@ -184,3 +184,92 @@ def test_texto_de_capitulo_sem_anunciar_versiculos():
     )
     assert 'Versículo' not in sem_numeros
     assert 'No princípio, criou Deus o céu e a terra.' in sem_numeros
+
+
+def _livro(capitulos):
+    return {'nome': 'Gênesis', 'capitulos': capitulos}
+
+
+def test_continuidade_termina_em_dois_pontos():
+    r = selecionar_versiculo_do_dia(
+        dia=0,
+        mensagens=[],
+        livro=_livro([
+            {'numero': 1, 'versiculos': [
+                {'numero': 1, 'texto': 'Disse Deus:'},
+                {'numero': 2, 'texto': 'Haja luz.'},
+            ]},
+        ]),
+    )
+    assert r['versiculo'] == 'Disse Deus: Haja luz.'
+    assert r['referencia'] == 'Gênesis 1:1'
+
+
+def test_continuidade_termina_em_dois_pontos_com_espaco():
+    r = selecionar_versiculo_do_dia(
+        dia=0, mensagens=[],
+        livro=_livro([
+            {'numero': 1, 'versiculos': [
+                {'numero': 1, 'texto': 'Disse Deus: '},
+                {'numero': 2, 'texto': 'Haja luz.'},
+            ]},
+        ]),
+    )
+    assert r['versiculo'] == 'Disse Deus: Haja luz.'
+
+
+def test_continuidade_ultimo_do_capitulo_vai_ao_proximo():
+    r = selecionar_versiculo_do_dia(
+        dia=0, mensagens=[],
+        livro=_livro([
+            {'numero': 1, 'versiculos': [
+                {'numero': 1, 'texto': 'Disse Deus:'},
+            ]},
+            {'numero': 2, 'versiculos': [
+                {'numero': 1, 'texto': 'Haja luz.'},
+            ]},
+        ]),
+    )
+    assert r['versiculo'] == 'Disse Deus: Haja luz.'
+    assert r['referencia'] == 'Gênesis 1:1'
+
+
+def test_continuidade_ultimo_do_ultimo_capitulo_mantem():
+    r = selecionar_versiculo_do_dia(
+        dia=0, mensagens=[],
+        livro=_livro([
+            {'numero': 1, 'versiculos': [
+                {'numero': 1, 'texto': 'Disse Deus:'},
+            ]},
+        ]),
+    )
+    assert r['versiculo'] == 'Disse Deus:'
+    assert r['referencia'] == 'Gênesis 1:1'
+
+
+def test_continuidade_encadeada():
+    r = selecionar_versiculo_do_dia(
+        dia=0, mensagens=[],
+        livro=_livro([
+            {'numero': 1, 'versiculos': [
+                {'numero': 1, 'texto': 'Disse Deus:'},
+                {'numero': 2, 'texto': 'E ele disse:'},
+                {'numero': 3, 'texto': 'Haja luz.'},
+            ]},
+        ]),
+    )
+    assert r['versiculo'] == 'Disse Deus: E ele disse: Haja luz.'
+
+
+def test_continuidade_sem_dois_pontos_inalterado():
+    r = selecionar_versiculo_do_dia(
+        dia=0, mensagens=[],
+        livro=_livro([
+            {'numero': 1, 'versiculos': [
+                {'numero': 1, 'texto': 'No princípio, criou Deus o céu.'},
+                {'numero': 2, 'texto': 'Haja luz.'},
+            ]},
+        ]),
+    )
+    assert r['versiculo'] == 'No princípio, criou Deus o céu.'
+    assert r['referencia'] == 'Gênesis 1:1'

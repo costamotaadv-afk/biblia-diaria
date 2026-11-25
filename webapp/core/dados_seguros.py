@@ -74,7 +74,8 @@ def selecionar_versiculo_do_dia(dia, mensagens, livro):
     if not capitulos:
         return sem_conteudo
 
-    cap_raw = capitulos[_div_trunc(dia, 66) % len(capitulos)]
+    cap_indice = _div_trunc(dia, 66) % len(capitulos)
+    cap_raw = capitulos[cap_indice]
     if not isinstance(cap_raw, dict):
         return sem_conteudo
     cap = dict(cap_raw)
@@ -83,9 +84,8 @@ def selecionar_versiculo_do_dia(dia, mensagens, livro):
     if not versiculos:
         return sem_conteudo
 
-    vers_raw = versiculos[
-        _div_trunc(dia, 66 * len(capitulos)) % len(versiculos)
-    ]
+    vers_indice = _div_trunc(dia, 66 * len(capitulos)) % len(versiculos)
+    vers_raw = versiculos[vers_indice]
     if not isinstance(vers_raw, dict):
         return sem_conteudo
 
@@ -93,14 +93,71 @@ def selecionar_versiculo_do_dia(dia, mensagens, livro):
     if not texto.strip():
         return sem_conteudo
 
+    texto_completo = completar_continuidade_de_versiculo(
+        capitulos, cap_indice, vers_indice, texto
+    )
+
     return {
-        'versiculo': texto,
+        'versiculo': texto_completo,
         'referencia': (
             f"{_dart_str(livro.get('nome'))} "
             f"{_dart_str(cap.get('numero'))}:{_dart_str(vers_raw.get('numero'))}"
         ),
         'mensagem': mensagem,
     }
+
+
+def _versiculos_de_capitulo(capitulos, indice):
+    """Lista de versículos do capítulo ``indice``, defensivamente (E16)."""
+    if indice < 0 or indice >= len(capitulos):
+        return []
+    cap = capitulos[indice]
+    if not isinstance(cap, dict):
+        return []
+    return como_lista(cap.get('versiculos')) or []
+
+
+def _texto_de_versiculo(capitulos, cap_indice, vers_indice):
+    """Texto do versículo, ou ``None`` se ausente/não-Map/vazio (E16)."""
+    versiculos = _versiculos_de_capitulo(capitulos, cap_indice)
+    if vers_indice < 0 or vers_indice >= len(versiculos):
+        return None
+    vers = versiculos[vers_indice]
+    if not isinstance(vers, dict):
+        return None
+    texto = _dart_str(vers.get('texto'))
+    return texto if texto.strip() else None
+
+
+def completar_continuidade_de_versiculo(capitulos, cap_indice, vers_indice, texto_inicial):
+    """Complementa o texto com o(s) versículo(s) seguinte(s) enquanto terminar em ':'.
+
+    Porte 1:1 de ``lib/dados_seguros.dart`` (continuidade do Versículo do Dia).
+    """
+    partes = [texto_inicial.rstrip()]
+    texto_atual = partes[-1]
+    ci = cap_indice
+    vi = vers_indice
+    passos = 0
+
+    while texto_atual.endswith(':') and passos < 5:
+        proximo = None
+        if vi + 1 < len(_versiculos_de_capitulo(capitulos, ci)):
+            proximo = _texto_de_versiculo(capitulos, ci, vi + 1)
+            if proximo is not None:
+                vi += 1
+        elif ci + 1 < len(capitulos):
+            proximo = _texto_de_versiculo(capitulos, ci + 1, 0)
+            if proximo is not None:
+                ci += 1
+                vi = 0
+        if proximo is None:
+            break
+        partes.append(proximo.rstrip())
+        texto_atual = proximo.rstrip()
+        passos += 1
+
+    return ' '.join(partes)
 
 
 def mapas_seguros(itens):

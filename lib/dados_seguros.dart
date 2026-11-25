@@ -69,7 +69,8 @@ Map<String, String> selecionarVersiculoDoDia({
     };
   }
 
-  final capRaw = capitulos[(dia ~/ 66) % capitulos.length];
+  final capIndice = (dia ~/ 66) % capitulos.length;
+  final capRaw = capitulos[capIndice];
   if (capRaw is! Map) {
     return {
       'versiculo': 'Sem conteúdo bíblico disponível.',
@@ -88,8 +89,9 @@ Map<String, String> selecionarVersiculoDoDia({
     };
   }
 
-  final versRaw =
-      versiculos[(dia ~/ (66 * capitulos.length)) % versiculos.length];
+  final versIndice =
+      (dia ~/ (66 * capitulos.length)) % versiculos.length;
+  final versRaw = versiculos[versIndice];
   if (versRaw is! Map) {
     return {
       'versiculo': 'Sem conteúdo bíblico disponível.',
@@ -109,11 +111,82 @@ Map<String, String> selecionarVersiculoDoDia({
     };
   }
 
+  // Continuidade: quando o versículo sorteado termina em ':' (fala/diálogo sem
+  // conclusão), junta o(s) versículo(s) seguinte(s) para não deixar o texto
+  // "no ar" (ex.: "Chamou Jeová a Moisés…:" → "...: Fala aos filhos de Israel").
+  final textoCompleto = completarContinuidadeDeVersiculo(
+    capitulos: capitulos,
+    capIndice: capIndice,
+    versIndice: versIndice,
+    textoInicial: texto,
+  );
+
   return {
-    'versiculo': texto,
+    'versiculo': textoCompleto,
     'referencia': '${livro['nome']} ${cap['numero']}:${versRaw['numero']}',
     'mensagem': mensagem,
   };
+}
+
+/// Devolve a lista de versículos do capítulo [indice] dentro de [capitulos],
+/// de forma defensiva (capítulo não-Map ou ausente → lista vazia; E16).
+List<dynamic> versiculosDeCapitulo(List<dynamic> capitulos, int indice) {
+  if (indice < 0 || indice >= capitulos.length) return const [];
+  final cap = capitulos[indice];
+  if (cap is! Map) return const [];
+  return comoLista(cap['versiculos']) ?? const <dynamic>[];
+}
+
+/// Devolve o texto do versículo [versIndice] do capítulo [capIndice], ou `null`
+/// se o item estiver ausente, não for `Map` ou o texto estiver vazio (E16).
+String? textoDeVersiculo(
+  List<dynamic> capitulos,
+  int capIndice,
+  int versIndice,
+) {
+  final versiculos = versiculosDeCapitulo(capitulos, capIndice);
+  if (versIndice < 0 || versIndice >= versiculos.length) return null;
+  final vers = versiculos[versIndice];
+  if (vers is! Map) return null;
+  final texto = '${vers['texto']}';
+  return texto.trim().isEmpty ? null : texto;
+}
+
+/// Complementa [textoInicial] com o(s) versículo(s) seguinte(s) enquanto o
+/// texto terminar em ':' (falas/diálogos que continuam no versículo posterior).
+/// Atravessa capítulos do mesmo livro; encerra no fim do livro ou em item
+/// inválido. Limite de segurança evita loop extremo (E16).
+String completarContinuidadeDeVersiculo({
+  required List<dynamic> capitulos,
+  required int capIndice,
+  required int versIndice,
+  required String textoInicial,
+}) {
+  final partes = <String>[textoInicial.trimRight()];
+  var textoAtual = partes.last;
+  var ci = capIndice;
+  var vi = versIndice;
+  var passos = 0;
+
+  while (textoAtual.endsWith(':') && passos < 5) {
+    String? proximo;
+    if (vi + 1 < versiculosDeCapitulo(capitulos, ci).length) {
+      proximo = textoDeVersiculo(capitulos, ci, vi + 1);
+      if (proximo != null) vi += 1;
+    } else if (ci + 1 < capitulos.length) {
+      proximo = textoDeVersiculo(capitulos, ci + 1, 0);
+      if (proximo != null) {
+        ci += 1;
+        vi = 0;
+      }
+    }
+    if (proximo == null) break;
+    partes.add(proximo.trimRight());
+    textoAtual = proximo.trimRight();
+    passos += 1;
+  }
+
+  return partes.join(' ');
 }
 
 /// Converte uma lista bruta de JSON em mapas seguros, descartando itens que

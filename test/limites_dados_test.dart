@@ -249,6 +249,122 @@ void main() {
     });
   });
 
+  group('selecionarVersiculoDoDia — continuidade ao terminar em \':\'', () {
+    Map<String, dynamic> livro(List<dynamic> capitulos) =>
+        <String, dynamic>{'nome': 'Gênesis', 'capitulos': capitulos};
+
+    test('terminando em \':\' → acrescenta o versículo seguinte', () {
+      final r = selecionarVersiculoDoDia(
+        dia: 0,
+        mensagens: [],
+        livro: livro(<dynamic>[
+          {
+            'numero': 1,
+            'versiculos': <dynamic>[
+              {'numero': 1, 'texto': 'Disse Deus:'},
+              {'numero': 2, 'texto': 'Haja luz.'},
+            ],
+          },
+        ]),
+      );
+      expect(r['versiculo'], 'Disse Deus: Haja luz.');
+      expect(r['referencia'], 'Gênesis 1:1');
+    });
+
+    test('terminando em \': \' (espaço) → acrescenta o seguinte', () {
+      final r = selecionarVersiculoDoDia(
+        dia: 0,
+        mensagens: [],
+        livro: livro(<dynamic>[
+          {
+            'numero': 1,
+            'versiculos': <dynamic>[
+              {'numero': 1, 'texto': 'Disse Deus: '},
+              {'numero': 2, 'texto': 'Haja luz.'},
+            ],
+          },
+        ]),
+      );
+      expect(r['versiculo'], 'Disse Deus: Haja luz.');
+    });
+
+    test('último do capítulo terminando em \':\' → 1º do próximo capítulo', () {
+      final r = selecionarVersiculoDoDia(
+        dia: 0,
+        mensagens: [],
+        livro: livro(<dynamic>[
+          {
+            'numero': 1,
+            'versiculos': <dynamic>[
+              {'numero': 1, 'texto': 'Disse Deus:'},
+            ],
+          },
+          {
+            'numero': 2,
+            'versiculos': <dynamic>[
+              {'numero': 1, 'texto': 'Haja luz.'},
+            ],
+          },
+        ]),
+      );
+      expect(r['versiculo'], 'Disse Deus: Haja luz.');
+      expect(r['referencia'], 'Gênesis 1:1');
+    });
+
+    test('último do último capítulo terminando em \':\' → mantém, sem erro', () {
+      final r = selecionarVersiculoDoDia(
+        dia: 0,
+        mensagens: [],
+        livro: livro(<dynamic>[
+          {
+            'numero': 1,
+            'versiculos': <dynamic>[
+              {'numero': 1, 'texto': 'Disse Deus:'},
+            ],
+          },
+        ]),
+      );
+      expect(r['versiculo'], 'Disse Deus:');
+      expect(r['referencia'], 'Gênesis 1:1');
+    });
+
+    test('encadeado: o seguinte também termina em \':\' → continua', () {
+      final r = selecionarVersiculoDoDia(
+        dia: 0,
+        mensagens: [],
+        livro: livro(<dynamic>[
+          {
+            'numero': 1,
+            'versiculos': <dynamic>[
+              {'numero': 1, 'texto': 'Disse Deus:'},
+              {'numero': 2, 'texto': 'E ele disse:'},
+              {'numero': 3, 'texto': 'Haja luz.'},
+            ],
+          },
+        ]),
+      );
+      expect(r['versiculo'], 'Disse Deus: E ele disse: Haja luz.');
+    });
+
+    test('sem \':\' → texto inalterado (regressão)', () {
+      final r = selecionarVersiculoDoDia(
+        dia: 0,
+        mensagens: [],
+        livro: livro(<dynamic>[
+          {
+            'numero': 1,
+            'versiculos': <dynamic>[
+              {'numero': 1, 'texto': 'No princípio, criou Deus o céu.'},
+              {'numero': 2, 'texto': 'Haja luz.'},
+            ],
+          },
+        ]),
+      );
+      expect(r['versiculo'], 'No princípio, criou Deus o céu.');
+      expect(r['referencia'], 'Gênesis 1:1');
+    });
+  });
+
   group('normalizarMensagens (E8/E9)', () {
     test('E9: itens não-string são descartados (sem "Instance of...")', () {
       expect(
