@@ -1,0 +1,62 @@
+[
+  {
+    "id": "joao-3-16-comentario",
+    "tipo": "comentario",
+    "titulo": "O amor de Deus em João 3:16",
+    "ref": "João 3:16",
+    "livro": "João",
+    "tema": ["amor", "salvação"],
+    "corpo": "Este versículo resume a mensagem do evangelho: a iniciativa é de Deus, a motivação é o amor e o meio é a entrega do Filho. A palavra traduzida por 'amor' expressa decisão e cuidado, não apenas sentimento. A fé aparece como confiança ativa, e a promessa aponta para uma vida que não se encerra na morte.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "joao-3-16-sermao",
+    "tipo": "sermao",
+    "titulo": "Sermão: a maior dádiva",
+    "ref": "João 3:16",
+    "livro": "João",
+    "tema": ["salvação"],
+    "corpo": "Muitas dádivas se medem pelo que custam. A de Deus, porém, mede-se por aquilo que é dado: o próprio Filho. O texto nos convida a três movimentos — reconhecer o amor de Deus, crer no Filho e viver como quem já recebeu. Não se trata de merecer, mas de aceitar um presente. Quem entende isso deixa de fugir de Deus e passa a se aproximar com confiança.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Esboços de sermão",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "joao-artigo",
+    "tipo": "artigo",
+    "titulo": "O Verbo se fez carne: panorama de João",
+    "ref": "João",
+    "livro": "João",
+    "tema": ["panorama"],
+    "corpo": "O Evangelho de João abre com um prólogo majestoso sobre o Verbo que existia desde o princípio e que se fez carne. Ao longo do livro, os sinais de Jesus revelam quem Ele é, e a narrativa registra longos diálogos que explicam o significado desses sinais. O objetivo declarado aparece perto do fim: escrever para que o leitor creia e tenha vida. É um evangelho mais reflexivo do que narrativo, feito para contemplação.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "joao-3-palestra",
+    "tipo": "palestra",
+    "titulo": "Palestra: fé e novo nascimento",
+    "ref": "João 3",
+    "livro": "João",
+    "tema": ["fé"],
+    "corpo": "O encontro de Jesus com Nicodemos, um mestre respeitado, mostra que a compreensão do reino não depende do estudo, mas de um recomeço. A imagem do novo nascimento fala de uma mudança de origem, não de aperfeiçoamento moral. Roteiro sugerido para exposição: (1) a busca sincera de Nicodemos; (2) a resposta de Jesus sobre nascer do alto; (3) o exemplo da serpente no deserto; (4) o amor que oferece a vida.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Roteiros de palestra",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  }
+]

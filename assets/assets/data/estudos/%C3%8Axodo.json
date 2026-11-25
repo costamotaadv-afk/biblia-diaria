@@ -1,0 +1,74 @@
+[
+  {
+    "id": "exo-3-14-nota",
+    "tipo": "nota",
+    "titulo": "EU SOU O QUE SOU",
+    "ref": "Êxodo 3:14",
+    "livro": "Êxodo",
+    "tema": ["nome de Deus"],
+    "corpo": "Quando Moisés pergunta o nome de Deus, a resposta aponta para a própria existência divina: 'EU SOU O QUE SOU'. O nome revela um Deus que é livre, autoexistente e fiel à sua promessa, pronto a agir para libertar o povo. Não é um nome mágico, mas a garantia de que Aquele que fala estará com Moisés.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "exo-20-comentario",
+    "tipo": "comentario",
+    "titulo": "Os Dez Mandamentos",
+    "ref": "Êxodo 20",
+    "livro": "Êxodo",
+    "tema": ["lei", "aliança"],
+    "corpo": "Os Dez Mandamentos são o resumo da aliança entre Deus e Israel. Os primeiros mandamentos tratam do relacionamento com Deus; os demais, do cuidado com o próximo — vida, família, propriedade e verdade. São apresentados dentro do convênio do Sinai, imediatamente após a libertação do Egito: a obediência é resposta à graça, e não o preço dela.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Notas de estudo",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "exo-14-momento",
+    "tipo": "momento_historico",
+    "titulo": "A travessia do mar e a memória do Êxodo",
+    "ref": "Êxodo 14",
+    "livro": "Êxodo",
+    "tema": ["história", "libertação"],
+    "periodo": "Êxodo e formação de Israel (fim do 2.º milênio a.C.)",
+    "fatos": [
+      "A saída do Egito tornou-se a experiência fundante de Israel, celebrada na Páscoa e em cânticos como Êxodo 15.",
+      "Textos egípcios antigos registram grupos semitas que entravam e saíam do delta do Nilo em busca de pastagens e trabalho.",
+      "Profetas e salmistas releram a travessia do mar como sinal de um Deus que abre caminho e recomeça a história."
+    ],
+    "corpo": "A passagem pelo mar tornou-se o grande marco da identidade de Israel, lembrado em cânticos e festas por gerações. Mais do que um episódio de fuga, o texto apresenta o livramento como obra de Deus, que abre caminho onde não há. Anos depois, profetas e salmistas recorreriam a essa imagem para falar de esperança e recomeço.",
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Contexto histórico",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  },
+  {
+    "id": "exo-1-momento",
+    "tipo": "momento_historico",
+    "titulo": "O Egito e a opressão dos hebreus",
+    "ref": "Êxodo 1",
+    "livro": "Êxodo",
+    "tema": ["história", "opressão"],
+    "periodo": "Novo Império Egípcio (c. 1550–1069 a.C.)",
+    "corpo": "O capítulo situa a opressão dos hebreus no período em que o Egito era governado por dinastias tebanas, possivelmente sob a 19.ª Dinastia, famosa por grandes obras que exigiam mão de obra intensiva. O temor de um povo estrangeiro que se multiplicava reflete a política de controle de grupos semitas no delta do Nilo.",
+    "fatos": [
+      "A construção das cidades de Pitom e Ramessés alinha-se com a política de cidades-armazéns do Baixo Egito.",
+      "O uso de tijolos com palha era técnica documentada em papiros egípcios da época para dar liga à argila.",
+      "Inscrições egípcias registram a presença e o trabalho de estrangeiros semitas na região do delta."
+    ],
+    "fonte": {
+      "autor": "Curadoria Bíblia Diária",
+      "obra": "Contexto histórico",
+      "ano": "2026",
+      "licenca": "Conteúdo próprio — uso livre no aplicativo"
+    }
+  }
+]
